@@ -1,0 +1,31 @@
+.custom-button {
+  font-family: 'Blender Pro Book', sans-serif;
+  font-size: 18px;
+  font-weight: bold; /* Add font-weight to make text bold */
+  color: #fff; /* Change font color to a brighter color */
+  background-image: url('../Background/button.png');
+  background-size: cover;
+  width: 242px;
+  height: 84px;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.custom-button:hover {
+  font-family: 'Blender Pro Book', sans-serif;
+  font-size: 18px;
+  font-weight: bold; /* Add font-weight to make text bold */
+  color: #FFF; /* Change font color to white on hover */
+  background-image: url('../Background/button1.png');
+  background-size: cover;
+  width: 242px;
+  height: 84px;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  border: none;
+  padding: 10px 20px;
+}
