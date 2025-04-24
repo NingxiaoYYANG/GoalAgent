@@ -1,0 +1,68 @@
+.quiz-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('../Background/verse.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  padding: 20px;
+}
+
+.quiz-content {
+  max-width: 900px;
+  background-color: rgba(16, 1, 32, 0.8);
+  padding: 40px;
+  border-radius: 10px;
+  border: 2px solid rgb(67, 4, 109);
+  box-shadow: 0 0 20px rgba(151, 227, 254, 0.2);
+}
+
+h1 {
+  color: #97E3FE;
+  text-align: center;
+  margin-bottom: 30px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 5px rgba(151, 227, 254, 0.5);
+  font-size: 2.5em;
+}
+
+.welcome-text {
+  font-size: 1.2em;
+  line-height: 1.6;
+  color: #97E3FE;
+  margin-bottom: 30px;
+  text-align: center;
+  font-family: 'Blender Pro Book', sans-serif;
+}
+
+.features, .instructions {
+  margin-bottom: 30px;
+}
+
+h2 {
+  color: #97E3FE;
+  margin-bottom: 15px;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 3px rgba(151, 227, 254, 0.3);
+  font-size: 1.8em;
+}
+
+ul, ol {
+  padding-left: 20px;
+  color: #97E3FE;
+  font-size: 1.1em;
+}
+
+li {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  font-family: 'Blender Pro Book', sans-serif;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}

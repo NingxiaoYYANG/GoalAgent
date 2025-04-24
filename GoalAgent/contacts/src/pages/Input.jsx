@@ -1,167 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BigButton from '../components/BigButton';
-import PropTypes from 'prop-types';
 import './Input.css';
 
-const Input = (props) => {
-    const [position, setPosition] = useState('')
-    const [areaOfInterest, setAreaOfInterest] = useState('');
+const Input = () => {
     const navigate = useNavigate();
+    const [currentStep, setCurrentStep] = useState(1);
+    const [selectedYear, setSelectedYear] = useState('');
+    const [selectedSkills, setSelectedSkills] = useState([]);
+    const [careerPath, setCareerPath] = useState(null);
 
-    const navigateToOutput = () => {
-      if (position.length != 0) {
-        navigate(`/monster-output`);
-      } else {
-        alert("Please select a valid position")
-    };
-      }
-      
+    useEffect(() => {
+        // Get previously selected career path from localStorage
+        const savedCareerPath = localStorage.getItem('careerSelection');
+        if (savedCareerPath) {
+            setCareerPath(JSON.parse(savedCareerPath));
+        }
+    }, []);
 
-    // handle change when user selects an option for area of interest
-    const handleInterestChange = (event) => {
-        setAreaOfInterest(event.target.value);
-        setPosition('');
+    const years = ['1-2 years', '3-5 years', '5-10 years', 'More than 10 years'];
+
+    const skillOptions = [
+        { id: 'technical', name: 'Technical Skills', description: 'Programming, system design and other technical skills' },
+        { id: 'communication', name: 'Communication Skills', description: 'Team collaboration, presentation and other communication skills' },
+        { id: 'management', name: 'Management Skills', description: 'Project management, team leadership and other management skills' },
+        { id: 'creative', name: 'Creative Skills', description: 'Creative design, problem solving and other innovative skills' }
+    ];
+
+    const handleYearSelect = (year) => {
+        setSelectedYear(year);
+        setCurrentStep(2);
     };
 
-    // handle change when user selects an option for area of Position
-    const handlePositionChange = (event) => {
-        setPosition(event.target.value);
-        props.setUserInputFn(event.target.value);
-        localStorage.setItem('userInput', event.target.value);
+    const handleSkillSelect = (skillId) => {
+        setSelectedSkills(prev => {
+            if (prev.includes(skillId)) {
+                return prev.filter(id => id !== skillId);
+            } else {
+                return [...prev, skillId];
+            }
+        });
     };
-    
-    const InterestOptions = [
-      { value: 'art', label: 'ART' },
-      { value: 'iT', label: 'IT' },
-      { value: 'engineering', label: 'ENGINEERING' },
-      { value: 'science', label: 'SCIENCE' },
-      { value: 'design', label: 'DESIGN' },
-  ];
-  
-  const ArtPositions = [
-      { value: 'Fine Artist', label: 'FINE ARTIST' },
-      { value: 'Art Illustrator', label: 'ART ILLUSTRATOR' },
-      { value: 'Graphic Designer', label: 'GRAPHIC DESIGNER' },
-  ];
-  
-  const ITPositions = [
-      { value: 'Software Development', label: 'SOFTWARE DEVELOPMENT' },
-      { value: 'Web Development', label: 'WEB DEVELOPMENT' },
-      { value: 'Systems Administration', label: 'SYSTEMS ADMINISTRATION' },
-      { value: 'Network Engineering', label: 'NETWORK ENGINEERING' },
-      { value: 'Cybersecurity', label: 'CYBERSECURITY' },
-      { value: 'Data Science and Analytics', label: 'DATA SCIENCE AND ANALYTICS' },
-      { value: 'Cloud Computing', label: 'CLOUD COMPUTING' },
-      { value: 'IT Consulting', label: 'IT CONSULTING' },
-  ];
-  
-  const EngineeringPositions = [
-      { value: 'Civil Engineering', label: 'CIVIL' },
-      { value: 'Mechanical Engineering', label: 'MECHANICAL' },
-      { value: 'Electrical Engineering', label: 'ELECTRICAL' },
-      { value: 'Aerospace Engineering', label: 'AEROSPACE' },
-      { value: 'Computer Engineering', label: 'COMPUTER' },
-      { value: 'Chemical Engineering', label: 'CHEMICAL' },
-      { value: 'Environmental Engineering', label: 'ENVIRONMENTAL' },
-      { value: 'Biomedical Engineering', label: 'BIOMEDICAL' },
-      { value: 'Industrial Engineering', label: 'INDUSTRIAL' },
-      { value: 'Software Engineering', label: 'SOFTWARE' },
-      { value: 'Materials Engineering', label: 'MATERIALS' },
-      { value: 'Petroleum Engineering', label: 'PETROLEUM' },
-      { value: 'Nuclear Engineering', label: 'NUCLEAR' },
-      { value: 'Renewable Energy Engineering', label: 'RENEWABLE ENERGY' },
-  ];
-  
-  const SciencePositions = [
-      { value: 'Research Scientist', label: 'RESEARCH' },
-      { value: 'Medical Scientist', label: 'MEDICAL' },
-      { value: 'Biotechnologist', label: 'BIOTECHNOLOGIST' },
-      { value: 'Pharmacist', label: 'PHARMACIST' },
-      { value: 'Environmental Scientist', label: 'ENVIRONMENTAL' },
-      { value: 'Geoscientist', label: 'GEOSCIENTIST' },
-      { value: 'Astrophysicist/Astronomer', label: 'ASTROPHYSICIST' },
-      { value: 'Neuroscientist', label: 'NEUROSCIENTIST' },
-      { value: 'Forensic Scientist', label: 'FORENSIC' },
-      { value: 'Science Educator', label: 'EDUCATOR' },
-      { value: 'Science Communicator', label: 'COMMUNICATOR' },
-      { value: 'Science Policy Analyst', label: 'ANALYST' },
-      { value: 'Food Scientist', label: 'FOOD' },
-      { value: 'Zoologist/Botanist', label: 'ZOOLOGIST' },
-      { value: 'Biomedical Researcher', label: 'BIOMEDICAL' },
-      { value: 'Materials Scientist', label: 'MATERIALS' },
-      { value: 'Science Illustrator', label: 'ILLUSTRATOR' },
-  ];
-  
-  const DesignPositions = [
-      { value: 'Graphic Design', label: 'GRAPHIC' },
-      { value: 'Web Design and Development', label: 'WEB DESIGN' },
-      { value: 'UX/UI Design', label: 'UX/UI' },
-      { value: 'Industrial Design', label: 'INDUSTRIAL' },
-      { value: 'Interior Design', label: 'INTERIOR' },
-      { value: 'Fashion Design', label: 'FASHION' },
-      { value: 'Animation and Motion Graphics', label: 'ANIMATION' },
-      { value: 'Architectural Design', label: 'ARCHITECTURAL' },
-      { value: 'Game Design', label: 'GAME DESIGN' },
-      { value: 'Multimedia Design', label: 'MULTIMEDIA' },
-      { value: 'User Experience Research', label: 'USER EXPERIENCE' },
-      { value: 'Advertising and Branding Design', label: 'ADVERTISING' },
-  ];
-  
-    
-    let positions = []
-    if (areaOfInterest === 'art') {
-        positions = ArtPositions;
-    } else if (areaOfInterest === 'iT') {
-        positions = ITPositions;
-    } else if (areaOfInterest === 'engineering') {
-        positions = EngineeringPositions;
-    } else if (areaOfInterest === 'science') {
-        positions = SciencePositions;
-    } else if (areaOfInterest === 'design') {
-        positions = DesignPositions;
-    }
+
+    const handleComplete = () => {
+        // Store selection data
+        const selectionData = {
+            ...careerPath,
+            year: selectedYear,
+            skills: selectedSkills
+        };
+        localStorage.setItem('careerSelection', JSON.stringify(selectionData));
+        navigate('/output');
+    };
 
     return (
-        <div className="Input_Section">
-          <div className="Interest_question">
-            <h1 className="input-heading">WHAT IS YOUR AREA OF INTEREST?</h1>
-            <div className="select-wrapper">
-              <select value={areaOfInterest} onChange={handleInterestChange} className="input-select">
-                <option value="">SELECT AN INTEREST</option>
-                {InterestOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+        <div className="input-container">
+            <div className="input-content">
+                <h1>Career Development Path</h1>
+                
+                {currentStep === 1 && (
+                    <div className="selection-step">
+                        <h2>Select Your Career Development Timeline</h2>
+                        <p className="instruction-text">
+                            Please select your expected career development timeframe
+                        </p>
+                        <div className="options-grid">
+                            {years.map(year => (
+                                <div 
+                                    key={year}
+                                    className="option-card"
+                                    onClick={() => handleYearSelect(year)}
+                                >
+                                    <h3>{year}</h3>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {currentStep === 2 && (
+                    <div className="selection-step">
+                        <h2>Select Skills to Improve</h2>
+                        <p className="instruction-text">
+                            Please select the skills you want to focus on in your career development (multiple selections allowed)
+                        </p>
+                        <div className="options-grid">
+                            {skillOptions.map(skill => (
+                                <div 
+                                    key={skill.id}
+                                    className={`option-card ${selectedSkills.includes(skill.id) ? 'selected' : ''}`}
+                                    onClick={() => handleSkillSelect(skill.id)}
+                                >
+                                    <h3>{skill.name}</h3>
+                                    <p>{skill.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="button-container">
+                            <BigButton onClick={handleComplete}>
+                                Generate Career Development Path
+                            </BigButton>
+                        </div>
+                    </div>
+                )}
             </div>
-          </div>
-      
-          {areaOfInterest && positions && (
-            <div className="career_question">
-              <h1 className="input-heading">WHAT IS YOUR CAREER GOAL?</h1>
-              <div className="select-wrapper">
-                <select value={position} onChange={handlePositionChange} className="input-select">
-                  <option value="">SELECT A POSITION</option>
-                  {positions.map((position) => (
-                    <option key={position.value} value={position.value}>
-                      {position.label}
-                    </option>
-                  ))}
-                </select>
-                <div className='button'>
-                  <BigButton id='confirm' onClick={navigateToOutput}> CONFIRM </BigButton>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
     );
 };
-
-Input.protoTypes = {
-    setUserInputFn: PropTypes.func
-}
 
 export default Input;

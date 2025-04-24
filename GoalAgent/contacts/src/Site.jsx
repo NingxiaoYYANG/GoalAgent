@@ -11,10 +11,14 @@ import Web3 from "web3";
 // Components
 import Welcome from "./components/Welcome";
 import BigButton from "./components/BigButton";
-import logo from "./Background/Skillverse.png";
+import logo from "./Background/Goalagent.png";
 import profile from "./Background/profile.png";
 import Output from './pages/Output.jsx';
 import Input from './pages/Input.jsx';
+import Quiz from './pages/Quiz.jsx';
+import Questionnaire from './pages/Questionnaire.jsx';
+import CategorySelection from './pages/CategorySelection.jsx';
+import CareerSelection from './pages/CareerSelection.jsx';
 
 import './Site.css'
 
@@ -82,7 +86,7 @@ function Site() {
   };
 
   const monsterInputBtn = () => {
-    navigate('/monster-input');
+    navigate('/quiz');
   }
   
   return (
@@ -90,7 +94,7 @@ function Site() {
       <nav className="navbar">
         <div className="navbar-content">
           <Link to="/" className="logo">
-            <img src={logo} alt="Skillverse Logo" className="logo" />
+            <img src={logo} alt="Goalagent Logo" className="logo" />
           </Link>
           <div className="nav-links">
             <Link to="/about" className="about">ABOUT US</Link>
@@ -99,20 +103,27 @@ function Site() {
           </div>
           <div className="user-section">
             {userWalletAddress ? (
-              <div className="user-info">
+              <>
                 <img src={profile} alt="Profile" className="profile" />
-                <BigButton className="logout-btn" onClick={logout}>DISCONNECT</BigButton>
-              </div>
+                <span className="wallet-address">
+                  {userWalletAddress.slice(0, 6)}...{userWalletAddress.slice(-4)}
+                </span>
+                <button onClick={logout} className="logout-btn">Logout</button>
+              </>
             ) : (
-              <BigButton className="login-btn" onClick={loginWithEth}>CONNECT A WALLET</BigButton>
+              <button onClick={loginWithEth} className="login-btn">Login with ETH</button>
             )}
           </div>
         </div>
       </nav>
       <Routes>
-        <Route path="/" element={<Welcome monsterInputBtnFn={monsterInputBtn} userConnected={userWalletAddress} />} />
-        <Route path='/monster-output' element={<Output userInput={userInput} userWalletAddress={userWalletAddress} />} />
-        <Route path='/monster-input' element={<Input setUserInputFn={setUserInput} />} />
+        <Route path="/" element={<Welcome />} />
+        <Route path="/quiz" element={<Quiz />} />
+        <Route path="/questionnaire" element={<Questionnaire />} />
+        <Route path="/category-selection" element={<CategorySelection />} />
+        <Route path="/career-selection/:category" element={<CareerSelection />} />
+        <Route path="/input" element={<Input />} />
+        <Route path="/output" element={<Output />} />
       </Routes>
     </div>
   );

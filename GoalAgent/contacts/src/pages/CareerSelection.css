@@ -1,49 +1,4 @@
-/* Imports */
-@import url('https://fonts.googleapis.com/css2?family=Blender+Pro+Book&display=swap');
-
-/* Input.css */
-.Input_Section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 100px 0;
-}
-
-.Interest_question {
-    padding-bottom: 50px;
-}
-
-.input-heading {
-  font-size: 48px;
-  margin-bottom: 20px;
-}
-
-.input-select {
-  width: 100%;
-  padding: 10px;
-  border: 2px solid #818DE0;
-  border-radius: 5px;
-  background-color: transparent;
-  font-size: 30px;
-  margin-bottom: 30px;
-  cursor: pointer;
-  transition: border-color 0.3s ease-in-out;
-}
-
-.input-select:focus {
-  outline: none;
-  border-color: #9A53D0;
-}
-
-/* Confirm Button */
-.button {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px; /* Add margin */
-}
-
-.input-container {
+.career-selection-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -55,7 +10,7 @@
   padding: 20px;
 }
 
-.input-content {
+.career-selection-content {
   max-width: 1000px;
   background-color: rgba(16, 1, 32, 0.8);
   padding: 40px;
@@ -71,28 +26,6 @@ h1 {
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 5px rgba(151, 227, 254, 0.5);
   font-size: 2.5em;
-}
-
-.career-path-summary {
-  background-color: rgba(151, 227, 254, 0.1);
-  border: 2px solid #97E3FE;
-  border-radius: 10px;
-  padding: 30px;
-  margin-bottom: 40px;
-}
-
-.career-path-summary h2 {
-  color: #97E3FE;
-  font-size: 1.8em;
-  margin-bottom: 20px;
-  font-family: 'Orbitron', sans-serif;
-}
-
-.career-path-summary p {
-  color: #97E3FE;
-  font-size: 1.2em;
-  margin-bottom: 10px;
-  font-family: 'Blender Pro Book', sans-serif;
 }
 
 .selection-step {
@@ -137,11 +70,6 @@ h2 {
   background-color: rgba(151, 227, 254, 0.2);
 }
 
-.option-card.selected {
-  background-color: rgba(151, 227, 254, 0.3);
-  border: 2px solid #97E3FE;
-}
-
 .option-card h3 {
   color: #97E3FE;
   font-size: 1.5em;
@@ -156,8 +84,31 @@ h2 {
   font-family: 'Blender Pro Book', sans-serif;
 }
 
+.selection-summary {
+  background-color: rgba(151, 227, 254, 0.1);
+  border: 2px solid #97E3FE;
+  border-radius: 10px;
+  padding: 30px;
+  margin: 40px auto;
+  max-width: 600px;
+}
+
+.selection-summary h3 {
+  color: #97E3FE;
+  font-size: 1.8em;
+  margin-bottom: 20px;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.selection-summary p {
+  color: #97E3FE;
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  font-family: 'Blender Pro Book', sans-serif;
+}
+
 .button-container {
   display: flex;
   justify-content: center;
   margin-top: 40px;
-}
+} 

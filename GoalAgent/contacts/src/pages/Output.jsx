@@ -6,7 +6,7 @@ import learnIcon from '../Monster/red_icon.png';
 import iniEgg from '../Monster/egg.png';
 import Open from '../Background/Open.png';  
 import Loading from '../Background/loading.gif';
-import monsterNFT from '../Monster/AIGC-image-SkillVerse/robotic_white.png';
+import monsterNFT from '../Monster/AIGC-image-Goalagent/robotic_white.png';
 import BigButton from '../components/BigButton';
 import Tree from 'react-d3-tree';
 
