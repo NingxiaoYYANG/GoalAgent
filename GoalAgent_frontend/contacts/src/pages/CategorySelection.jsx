@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CategorySelection.css';
 import technical from '../Background/technical.png';
@@ -7,8 +7,24 @@ import services from '../Background/services.png';
 import business from '../Background/business.png';
 import other from '../Background/other.png';
 
+// {
+//   category_selection: {
+//     selected_category: 'Technical'  // 或 'Arts', 'Services', 'Business', 'Others'
+//   }
+// }
+
 const CategorySelection = () => {
   const navigate = useNavigate();
+  const [recommendedCategory, setRecommendedCategory] = useState(null);
+
+  useEffect(() => {
+    // Get the recommended category from localStorage
+    const questionnaireData = localStorage.getItem('questionnaireData');
+    if (questionnaireData) {
+      const data = JSON.parse(questionnaireData);
+      setRecommendedCategory(data.top_category);
+    }
+  }, []);
 
   const categories = [
     {
@@ -44,6 +60,18 @@ const CategorySelection = () => {
   ];
 
   const handleCategorySelect = (categoryId) => {
+    // Find the selected category
+    const selectedCategory = categories.find(cat => cat.id === categoryId);
+    
+    // Create the category selection data
+    const categorySelection = {
+      selected_category: selectedCategory.name
+    };
+    
+    // Save to localStorage
+    localStorage.setItem('categorySelection', JSON.stringify(categorySelection));
+    
+    // Navigate to the next page
     navigate(`/career-selection/${categoryId}`);
   };
 
@@ -55,11 +83,17 @@ const CategorySelection = () => {
           Based on your answers, please select the category that best matches your interests and strengths.
         </p>
         
+        {recommendedCategory && (
+          <div className="recommended-category">
+            <p>Based on your questionnaire, we recommend: <strong>{recommendedCategory}</strong></p>
+          </div>
+        )}
+        
         <div className="categories-grid">
           {categories.map(category => (
             <div 
               key={category.id}
-              className="category-card"
+              className={`category-card ${recommendedCategory === category.name ? 'recommended' : ''}`}
               onClick={() => handleCategorySelect(category.id)}
             >
               <div className="category-image">

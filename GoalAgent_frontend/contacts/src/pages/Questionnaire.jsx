@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import BigButton from '../components/BigButton';
 import './Questionnaire.css';
 
+// {
+//   questionnaire: {
+//     answers: {
+//       1: 5,  // 问题ID: 分数
+//       2: 4,
+//       // ... 其他问题的答案
+//     },
+//     category_scores: {
+//       'Technical': 25,
+//       'Arts': 18,
+//       'Services': 22,
+//       'Business': 15,
+//       'Others': 12
+//     },
+//     top_category: 'Technical'
+//   }
+// }
+
 const Questionnaire = () => {
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(1);
@@ -181,7 +199,20 @@ const Questionnaire = () => {
 
   const handleComplete = () => {
     const categoryScores = calculateCategoryScores();
+    const topCategory = findTopCategory(categoryScores);
+    
+    // Create the questionnaire data object
+    const questionnaireData = {
+      answers: answers,
+      category_scores: categoryScores,
+      top_category: topCategory
+    };
+    
+    // Save to localStorage
+    localStorage.setItem('questionnaireData', JSON.stringify(questionnaireData));
     localStorage.setItem('categoryScores', JSON.stringify(categoryScores));
+    
+    // Navigate to the next page
     navigate('/category-selection');
   };
 

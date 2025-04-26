@@ -1,0 +1,7 @@
+flask
+flask-cors
+python-dotenv
+semantic-kernel
+openai
+aiohttp
+huggingface_hub

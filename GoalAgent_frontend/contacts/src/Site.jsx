@@ -123,7 +123,20 @@ function Site() {
         <Route path="/category-selection" element={<CategorySelection />} />
         <Route path="/career-selection/:category" element={<CareerSelection />} />
         <Route path="/input" element={<Input />} />
-        <Route path="/output" element={<Output />} />
+        <Route 
+          path="/output" 
+          element={
+            userWalletAddress ? (
+              <Output userWalletAddress={userWalletAddress} />
+            ) : (
+              <div className="wallet-required">
+                <h2>Wallet Connection Required</h2>
+                <p>Please connect your wallet to view your career path.</p>
+                <button onClick={loginWithEth} className="login-btn">Connect Wallet</button>
+              </div>
+            )
+          } 
+        />
       </Routes>
     </div>
   );
