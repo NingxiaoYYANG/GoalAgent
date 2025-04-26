@@ -10,31 +10,31 @@ const CategorySelection = () => {
       id: 'technical',
       name: 'Technical',
       description: 'For those who enjoy working with technology, programming, and engineering.',
-      image: '../Background/technical.png'
+      image: '/Background/technical.png'
     },
     {
       id: 'arts',
       name: 'Arts',
       description: 'For creative individuals who excel in visual arts, design, and digital media.',
-      image: '../Background/arts.png'
+      image: '/Background/arts.png'
     },
     {
       id: 'services',
       name: 'Services',
       description: 'For those who are passionate about helping others through education, healthcare, and culinary arts.',
-      image: '../Background/services.png'
+      image: '/Background/services.png'
     },
     {
       id: 'business',
       name: 'Business',
       description: 'For individuals interested in management, finance, and entrepreneurship.',
-      image: '../Background/business.png'
+      image: '/Background/business.png'
     },
     {
       id: 'others',
       name: 'Others',
       description: 'For those interested in law, social work, and other specialized fields.',
-      image: '../Background/others.png'
+      image: '/Background/other.png'
     }
   ];
 

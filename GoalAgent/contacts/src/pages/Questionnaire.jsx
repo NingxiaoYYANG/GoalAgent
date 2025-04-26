@@ -221,7 +221,7 @@ const Questionnaire = () => {
             </p>
             <div className="button-container">
               <BigButton onClick={handleComplete}>
-                PROCEED TO CATEGORY SELECTION
+                CONTINUE
               </BigButton>
             </div>
           </div>

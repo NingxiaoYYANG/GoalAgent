@@ -8,9 +8,9 @@ import Title from '../Background/Title.png';
 const Welcome = (props) => {
   return (
     <div className='Welcome_Section'>
-      <h2 className="intro-heading">A DECENTRALIZED SKILL CERTIFICATION PLATFORM EMPOWERED BY AI</h2>
+      <h2 className="intro-heading">A DECENTRALIZED CAREER PLANNER EMPOWERED BY AI</h2>
       <h1 className='Title'>
-        <img src={Title} alt="Title" />
+        <img src={Title} alt="Title" style={{ width: '500px' }} />
       </h1>
       {props.userConnected && ( /* 仅在 userConnected 为 true 时显示按钮 */
         <BigButton onClick={props.monsterInputBtnFn}>START </BigButton>

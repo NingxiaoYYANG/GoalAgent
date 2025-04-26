@@ -117,7 +117,7 @@ function Site() {
         </div>
       </nav>
       <Routes>
-        <Route path="/" element={<Welcome />} />
+        <Route path="/" element={<Welcome userConnected={true} monsterInputBtnFn={monsterInputBtn} />} />
         <Route path="/quiz" element={<Quiz />} />
         <Route path="/questionnaire" element={<Questionnaire />} />
         <Route path="/category-selection" element={<CategorySelection />} />
