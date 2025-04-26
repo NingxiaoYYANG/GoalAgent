@@ -1,6 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CategorySelection.css';
+import technical from '../Background/technical.png';
+import arts from '../Background/arts.png';
+import services from '../Background/services.png';
+import business from '../Background/business.png';
+import other from '../Background/other.png';
 
 const CategorySelection = () => {
   const navigate = useNavigate();
@@ -10,31 +15,31 @@ const CategorySelection = () => {
       id: 'technical',
       name: 'Technical',
       description: 'For those who enjoy working with technology, programming, and engineering.',
-      image: '/Background/technical.png'
+      image: technical
     },
     {
       id: 'arts',
       name: 'Arts',
       description: 'For creative individuals who excel in visual arts, design, and digital media.',
-      image: '/Background/arts.png'
+      image: arts
     },
     {
       id: 'services',
       name: 'Services',
       description: 'For those who are passionate about helping others through education, healthcare, and culinary arts.',
-      image: '/Background/services.png'
+      image: services
     },
     {
       id: 'business',
       name: 'Business',
       description: 'For individuals interested in management, finance, and entrepreneurship.',
-      image: '/Background/business.png'
+      image: business
     },
     {
       id: 'others',
       name: 'Others',
       description: 'For those interested in law, social work, and other specialized fields.',
-      image: '/Background/other.png'
+      image: other
     }
   ];
 

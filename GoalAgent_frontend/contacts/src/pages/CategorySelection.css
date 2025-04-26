@@ -69,8 +69,8 @@ h1 {
 }
 
 .category-image img {
-  width: 100%;
-  height: auto;
+  width: 80%;
+  height: 100%;
   object-fit: contain;
 }
 
