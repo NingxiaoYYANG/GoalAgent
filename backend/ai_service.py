@@ -61,19 +61,50 @@ User Info:
         print(f"[DEBUG] Context: {context}")
         
         prompt = f"""
-Please expand the following milestone into a list of 3–5 specific skills, 3–5 learning resources, and 2–3 tangible achievements.
+You are a career development AI assistant. Based on the user's complete background information below, expand the specified milestone into a multi-level tree of subtasks and skills. All content must be tailored to the user's context.
 
-Milestone: {milestone_name}
-Career Path: {context.get('career_path')}
-Specialization: {context.get('specialization')}
-Year: {context.get('year')}
+[User Context] (JSON):
+{json.dumps(context, ensure_ascii=False, indent=2)}
 
-Output format:
+[Milestone to expand]: {milestone_name}
+
+[Requirements]:
+1. Generate a tree structure with 2-3 levels, showing task breakdown and skill dependencies.
+2. Each node must include:
+   - name: concise name
+   - description: short description (max 10 words)
+   - difficulty: easy/medium/hard
+   - skills: list of specific skills
+   - children: (optional) list of subtasks
+3. First level: main subtasks (2-4 items), second level: detailed steps for each subtask (2-3 items), third level: implementation details (optional).
+4. Reasonable difficulty distribution, logical progression.
+5. Output standard JSON, and ensure all content is highly relevant to the user's background, goals, interests, and skills.
+
+[Output format example]:
 {{
-  "skills": [...],
-  "resources": [...],
-  "achievements": [...]
+  "name": "Milestone Name",
+  "description": "Brief description",
+  "difficulty": "medium",
+  "skills": ["skill1", "skill2"],
+  "children": [
+    {{
+      "name": "Subtask 1",
+      "description": "Brief description",
+      "difficulty": "easy",
+      "skills": ["subskill1"],
+      "children": [
+        {{
+          "name": "Step 1",
+          "description": "Brief description",
+          "difficulty": "easy",
+          "skills": ["stepskill1"]
+        }}
+      ]
+    }}
+  ]
 }}
+
+Please strictly output JSON only.
 """
         try:
             response = self.model.generate_content([prompt])
@@ -88,7 +119,21 @@ Output format:
                 return result
             else:
                 print("[ERROR] No valid JSON found in response")
-                return {"error": "Invalid response format", "skills": [], "resources": [], "achievements": []}
+                return {
+                    "error": "Invalid response format",
+                    "name": milestone_name,
+                    "description": "Failed to generate detailed structure",
+                    "difficulty": "medium",
+                    "skills": [],
+                    "children": []
+                }
         except Exception as e:
             print(f"[ERROR expand_milestone] {e}")
-            return {"error": str(e), "skills": [], "resources": [], "achievements": []}
+            return {
+                "error": str(e),
+                "name": milestone_name,
+                "description": "Error generating structure",
+                "difficulty": "medium",
+                "skills": [],
+                "children": []
+            }

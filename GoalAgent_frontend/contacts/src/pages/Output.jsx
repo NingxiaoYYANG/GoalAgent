@@ -64,9 +64,25 @@ const edgeTypes = {
 };
 
 // 自定义节点样式
-const CustomNode = ({ data }) => {
+const CustomNode = ({ data, isLoading }) => {
   return (
-    <div className={`custom-node ${data.type}`}>
+    <div className={`custom-node ${data.type}`} data-difficulty={data.difficulty} style={{
+      border: data.type === 'milestone' ? '3px solid #FFD600' :
+             data.type === 'root' ? '3px solid #00BFFF' :
+             data.type === 'year' ? '3px solid #7CFC00' :
+             data.type === 'subtask' ? '2px dashed #aaa' :
+             '1px solid #ccc',
+      background: data.type === 'milestone' ? '#fffbe6' :
+                  data.type === 'root' ? '#e6f7ff' :
+                  data.type === 'year' ? '#f0fff0' :
+                  data.type === 'subtask' ? '#f9f9f9' :
+                  '#fff',
+      boxShadow: data.type === 'milestone' ? '0 0 10px #FFD60055' :
+                 data.type === 'root' ? '0 0 10px #00BFFF55' :
+                 data.type === 'year' ? '0 0 10px #7CFC0055' :
+                 'none',
+      position: 'relative'
+    }}>
       <Handle
         type="target"
         position={Position.Top}
@@ -74,6 +90,9 @@ const CustomNode = ({ data }) => {
       />
       <div className="node-content">
         <div className="node-label">{data.label}</div>
+        {data.description && (
+          <div className="node-description">{data.description}</div>
+        )}
         {data.skills && data.skills.length > 0 && (
           <div className="node-skills">
             {data.skills.map((skill, index) => (
@@ -82,6 +101,16 @@ const CustomNode = ({ data }) => {
           </div>
         )}
       </div>
+      {data.difficulty && (
+        <div className={`difficulty-badge ${data.difficulty}`}>
+          {data.difficulty.charAt(0).toUpperCase()}
+        </div>
+      )}
+      {isLoading && (
+        <div className="milestone-loading-overlay">
+          <img src={Loading} alt="Loading..." className="milestone-loading-spinner" />
+        </div>
+      )}
       <Handle
         type="source"
         position={Position.Bottom}
@@ -89,10 +118,6 @@ const CustomNode = ({ data }) => {
       />
     </div>
   );
-};
-
-const nodeTypes = {
-  custom: CustomNode,
 };
 
 const Output = ({ userWalletAddress }) => {
@@ -108,7 +133,10 @@ const Output = ({ userWalletAddress }) => {
   const [historyStack, setHistoryStack] = useState([]);
   const [expandedNodes, setExpandedNodes] = useState({});
   const [loadingNode, setLoadingNode] = useState(null);
-  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'year-detail'
+  const [viewMode, setViewMode] = useState('overview');
+  const [breadcrumbs, setBreadcrumbs] = useState([]);
+  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
+  const [rootNodePosition, setRootNodePosition] = useState({ x: 0, y: 0 });
   const contractAddress = '0x31e6c3b577a73afb176d925c7a6319c40128fc27';
 
   useEffect(() => {
@@ -117,9 +145,7 @@ const Output = ({ userWalletAddress }) => {
     if (storedPlan) {
       try {
         const parsedPlan = JSON.parse(storedPlan);
-        console.log('Parsed plan:', parsedPlan);
         const flowData = transformCareerPlanToFlow(parsedPlan);
-        console.log('Transformed flow data:', flowData);
         setCareerPlan(flowData);
       } catch (error) {
         console.error('Error parsing stored plan:', error);
@@ -150,6 +176,7 @@ const Output = ({ userWalletAddress }) => {
       }
     }
   };
+
   const createDefaultCareerPlan = () => {
     return {
       name: "Career Path",
@@ -213,7 +240,6 @@ const Output = ({ userWalletAddress }) => {
   };
 
   const transformCareerPlanToFlow = (plan) => {
-    console.log('Transforming plan:', plan);
     let nodes = [];
     let edges = [];
     let globalX = 0;
@@ -235,14 +261,14 @@ const Output = ({ userWalletAddress }) => {
           type: nodeType,
           year: depth === 1 ? node.name : null,
           specialization: node.specialization || '',
-          description: node.description || ''
+          description: node.description || '',
+          difficulty: node.difficulty || 'medium'
         },
         position: { x: xOffset * 300, y: depth * 350 },
         sourcePosition: Position.Bottom,
         targetPosition: Position.Top
       };
       
-      console.log('Creating node:', newNode);
       nodes.push(newNode);
   
       if (parentId) {
@@ -262,7 +288,6 @@ const Output = ({ userWalletAddress }) => {
           sourceHandle: 'source',
           targetHandle: 'target'
         };
-        console.log('Creating edge:', newEdge);
         edges.push(newEdge);
       }
   
@@ -272,7 +297,6 @@ const Output = ({ userWalletAddress }) => {
         });
       }
   
-      // Handle milestones array if it exists
       if (node.milestones && Array.isArray(node.milestones)) {
         node.milestones.forEach((milestone, index) => {
           const milestoneId = `${id}-milestone-${index}`;
@@ -312,9 +336,6 @@ const Output = ({ userWalletAddress }) => {
     };
   
     traverse(plan);
-    console.log('Final nodes:', nodes);
-    console.log('Final edges:', edges);
-  
     return { nodes, edges };
   };
 
@@ -331,30 +352,21 @@ const Output = ({ userWalletAddress }) => {
       return;
     }
   
-    // console.log('=== Debug: NFT Collection ===');
-    // console.log('Wallet address:', userWalletAddress);
-    // console.log('Contract address:', contractAddress);
-  
     try {
       const contract = getContract();
       if (!contract) {
         throw new Error('Contract not initialized');
       }
-      // console.log('Contract initialized successfully');
   
       const transaction = await contract.transferFrom(contractAddress, userWalletAddress, 5);
-      // console.log('Transaction sent:', transaction.hash);
   
       await transaction.wait();
-      // console.log('Transaction confirmed');
   
       setIsCollected(true);
-      // console.log('NFT collected successfully');
     } catch (error) {
       console.error('Error collecting NFT:', error);
       alert('Failed to collect NFT. Please try again.');
     }
-    // console.log('===========================');
   };
   
   // Check if a node and all its children are completed
@@ -380,48 +392,32 @@ const Output = ({ userWalletAddress }) => {
     const completedYears = yearNodes.filter(year => isNodeCompleted(year)).length;
     const progress = (completedYears / yearNodes.length) * 100;
     
-    // Debug: Log progress calculation
-    console.log('=== Debug: Progress Calculation ===');
-    console.log('Year nodes:', yearNodes);
-    console.log('Completed years:', completedYears);
-    console.log('Progress:', progress);
-    console.log('=================================');
-    
     return progress;
   };
 
   const handleNodeComplete = async (nodeId) => {
-    console.log('=== Debug: Node Completion ===');
-    console.log('Completing node:', nodeId);
-    
     const updatedCompletion = { ...completedNodes, [nodeId]: true };
-    console.log('Updated completion:', updatedCompletion);
-    
     setCompletedNodes(updatedCompletion);
     localStorage.setItem('nodeCompletion', JSON.stringify(updatedCompletion));
     
     // Update unlock progress
     const newProgress = calculateUnlockProgress();
-    console.log('New progress:', newProgress);
     setUnlockProgress(newProgress);
     
     // If progress is 100% and NFT hasn't been collected, enable collection
     if (newProgress === 100 && !isCollected) {
-      console.log('Progress is 100%, attempting to collect NFT');
       try {
         await collectNFT();
       } catch (error) {
         console.error('Error collecting NFT:', error);
       }
     }
-    console.log('===============================');
   };
    
 
   const fetchMilestoneDetails = async (nodeId, nodeData) => {
     try {
       setLoadingNode(nodeId);
-      console.log('Node data received:', nodeData);
       
       const requestData = {
         milestone_name: nodeData.label,
@@ -434,9 +430,6 @@ const Output = ({ userWalletAddress }) => {
         }
       };
       
-      console.log('Sending request to expand_milestone:', requestData);
-      console.log('Request data milestone_name:', requestData.milestone_name);
-      
       const response = await fetch('http://localhost:5000/expand_milestone', {
         method: 'POST',
         headers: {
@@ -446,20 +439,16 @@ const Output = ({ userWalletAddress }) => {
       });
 
       const responseData = await response.json();
-      console.log('Received milestone details:', responseData);
 
       if (!response.ok) {
-        console.error('Error response:', responseData);
         throw new Error(`Failed to fetch milestone details: ${responseData.error || response.statusText}`);
       }
 
       if (responseData.error) {
-        console.error('Error in response data:', responseData.error);
         throw new Error(responseData.error);
       }
 
       if (!responseData.skills || !Array.isArray(responseData.skills)) {
-        console.error('Invalid response format:', responseData);
         throw new Error('Invalid response format: missing skills array');
       }
       
@@ -506,24 +495,208 @@ const Output = ({ userWalletAddress }) => {
   };
 
   const handleNodeClick = useCallback((event, node) => {
-    console.log('Clicked node:', node);
-    
+    if (loadingNode) return; // 正在加载时禁止点击
     if (node.data.type === 'year') {
+      if (focusedNodeId === node.id) {
+        return;
+      }
+
       setViewMode('year-detail');
       setFocusedNodeId(node.id);
       setHistoryStack(prev => [...prev, { mode: 'overview', nodeId: null }]);
+      setBreadcrumbs(prev => [...prev, { 
+        id: `${node.id}_${Date.now()}`, 
+        nodeId: node.id,
+        label: node.data.label 
+      }]);
+      
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({
+            padding: 0.2,
+            duration: 300,
+            includeHiddenNodes: false
+          });
+        }
+      }, 100);
     } else if (node.data.type === 'root') {
       setViewMode('overview');
       setFocusedNodeId(null);
+      setBreadcrumbs([]);
+      
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({
+            padding: 0.2,
+            duration: 300,
+            includeHiddenNodes: false
+          });
+        }
+      }, 100);
+    } else if (node.data.type === 'milestone') {
+      if (node.data.isExpanded) return; // 已展开则不响应
+      setLoadingNode(node.id);
+      // 获取所有用户输入数据
+      const completeUserData = JSON.parse(localStorage.getItem('completeUserData') || '{}');
+      const requestData = {
+        milestone_name: node.data.label,
+        context: {
+          ...completeUserData, // 全部带上
+          career_path: careerPlan?.name || 'Web Development',
+          specialization: node.data.specialization || '',
+          year: node.data.year || '',
+          parent_node: node.data.parentNode || '',
+          node_type: 'milestone'
+        }
+      };
+      fetch('http://localhost:5000/expand_milestone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Expanded milestone response:', data);
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        // 只更新原有 milestone 节点，补充详细信息，保持原有位置
+        const updatedNode = {
+          ...node,
+          data: {
+            ...node.data,
+            isExpanded: true,
+            description: data.description || node.data.description,
+            skills: data.skills || node.data.skills,
+            difficulty: data.difficulty || node.data.difficulty
+          },
+          position: node.position // 保持原有位置
+        };
+
+        // 只将 children 转为新节点，水平分布
+        const { nodes: newNodes, edges: newEdges } = transformSubtreeToFlow(
+          { children: data.children || [] }, 
+          node.id,
+          node.position // 传递milestone节点的position
+        );
+
+        setCareerPlan(prev => {
+          const updatedNodes = prev.nodes.map(n => 
+            n.id === node.id ? updatedNode : n
+          ).concat(newNodes);
+          const updatedEdges = prev.edges.concat(newEdges);
+          return { nodes: updatedNodes, edges: updatedEdges };
+        });
+
+        setViewMode('milestone-detail');
+        setFocusedNodeId(node.id);
+        setHistoryStack(prev => [...prev, { mode: 'year-detail', nodeId: focusedNodeId }]);
+        setBreadcrumbs(prev => [...prev, { 
+          id: `${node.id}_${Date.now()}`, 
+          nodeId: node.id,
+          label: node.data.label 
+        }]);
+
+        setTimeout(() => {
+          if (reactFlowInstance) {
+            reactFlowInstance.fitView({
+              padding: 0.2,
+              duration: 300,
+              includeHiddenNodes: false
+            });
+          }
+        }, 100);
+      })
+      .catch(error => {
+        console.error('Error expanding milestone:', error);
+      })
+      .finally(() => {
+        setLoadingNode(null);
+      });
     }
-  
-    setTimeout(() => {
-      if (reactFlowInstance) {
-        const visibleNodes = filterFocusedNodes();
-        reactFlowInstance.fitView({ nodes: visibleNodes, padding: 0.2 });
+  }, [reactFlowInstance, viewMode, focusedNodeId, careerPlan, loadingNode]);
+
+  // 递归计算子树宽度
+  function getSubtreeWidth(node) {
+    if (!node.children || node.children.length === 0) return 1;
+    return node.children.reduce((sum, child) => sum + getSubtreeWidth(child), 0);
+  }
+
+  // 优化 transformSubtreeToFlow 使子节点水平分布且不重叠
+  const transformSubtreeToFlow = (data, parentId, parentPosition = {x: 0, y: 0}) => {
+    const nodes = [];
+    const edges = [];
+    let nodeIdCounter = 0;
+    const spread = 250;
+
+    function traverse(node, parentNodeId, depth = 0, xStart = 0, y = 0, parentPos = {x: 0, y: 0}) {
+      const nodeId = `${parentId}-subtree-${nodeIdCounter++}`;
+      const subtreeWidth = getSubtreeWidth(node);
+      const nodeX = xStart + (subtreeWidth / 2 - 0.5) * spread;
+      const nodeY = y;
+      const newNode = {
+        id: nodeId,
+        type: 'custom',
+        data: {
+          label: node.name,
+          type: node.type || 'subtask',
+          skills: node.skills || [],
+          description: node.description || '',
+          difficulty: node.difficulty || 'medium',
+          parentNode: parentNodeId
+        },
+        position: { x: nodeX, y: nodeY },
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top
+      };
+      nodes.push(newNode);
+      if (parentNodeId) {
+        edges.push({
+          id: `${parentNodeId}-${nodeId}`,
+          source: parentNodeId,
+          target: nodeId,
+          type: 'custom',
+          animated: false,
+          style: { 
+            stroke: node.difficulty === 'hard' ? '#ff4444' : 
+                   node.difficulty === 'medium' ? '#ffaa00' : '#44aa44'
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 20,
+            height: 20,
+            color: node.difficulty === 'hard' ? '#ff4444' : 
+                   node.difficulty === 'medium' ? '#ffaa00' : '#44aa44',
+          }
+        });
       }
-    }, 0);
-  }, [reactFlowInstance, viewMode]);
+      if (node.children && node.children.length > 0) {
+        let childX = xStart;
+        node.children.forEach(child => {
+          const childWidth = getSubtreeWidth(child);
+          traverse(child, nodeId, depth + 1, childX, nodeY + 200, {x: nodeX, y: nodeY});
+          childX += childWidth * spread;
+        });
+      }
+    }
+
+    // 只遍历 children，水平分布且不重叠
+    if (data.children && Array.isArray(data.children)) {
+      const totalWidth = getSubtreeWidth({children: data.children});
+      let xStart = parentPosition.x - (totalWidth * spread) / 2 + spread / 2;
+      data.children.forEach(child => {
+        const childWidth = getSubtreeWidth(child);
+        traverse(child, parentId, 1, xStart, parentPosition.y + 200, parentPosition);
+        xStart += childWidth * spread;
+      });
+    }
+
+    return { nodes, edges };
+  };
 
   const handleBack = () => {
     if (historyStack.length > 0) {
@@ -532,6 +705,7 @@ const Output = ({ userWalletAddress }) => {
       setHistoryStack(prev);
       setViewMode(lastState.mode);
       setFocusedNodeId(lastState.nodeId);
+      setBreadcrumbs(prev => prev.slice(0, -1));
 
       setTimeout(() => {
         if (reactFlowInstance) {
@@ -542,19 +716,51 @@ const Output = ({ userWalletAddress }) => {
     }
   };
 
+  const navigateToBreadcrumb = (index) => {
+    const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
+    setBreadcrumbs(newBreadcrumbs);
+    
+    if (index === -1) {
+      // 返回根视图
+      setViewMode('overview');
+      setFocusedNodeId(null);
+      setHistoryStack([]);
+    } else {
+      // 返回到选中的层级
+      const targetNode = careerPlan.nodes.find(n => n.id === newBreadcrumbs[index].nodeId);
+      if (targetNode) {
+        setViewMode('year-detail');
+        setFocusedNodeId(targetNode.id);
+        setHistoryStack(Array(index).fill({ mode: 'overview', nodeId: null }));
+      }
+    }
+
+    setTimeout(() => {
+      if (reactFlowInstance) {
+        const visibleNodes = filterFocusedNodes();
+        reactFlowInstance.fitView({ nodes: visibleNodes, padding: 0.2 });
+      }
+    }, 0);
+  };
+
   const filterFocusedNodes = () => {
     if (!careerPlan) return [];
     
     if (viewMode === 'overview') {
-      // 在概览模式下，只显示根节点和年份节点
       return careerPlan.nodes.filter(node => 
         node.data.type === 'root' || node.data.type === 'year'
       );
     } else if (viewMode === 'year-detail' && focusedNodeId) {
-      // 在年份详情模式下，只显示选中的年份节点和其里程碑
       return careerPlan.nodes.filter(node => 
         node.id === focusedNodeId || 
-        (node.data.type === 'milestone' && node.data.parentNode === focusedNodeId)
+        (node.data.type === 'milestone' && node.data.parentNode === focusedNodeId) ||
+        // 保留已展开的里程碑的子树
+        (node.data.type === 'subtask' && node.id.startsWith(`${focusedNodeId}-subtree`))
+      );
+    } else if (viewMode === 'milestone-detail' && focusedNodeId) {
+      return careerPlan.nodes.filter(node => 
+        node.id === focusedNodeId || 
+        node.id.startsWith(`${focusedNodeId}-subtree`)
       );
     }
     
@@ -565,17 +771,27 @@ const Output = ({ userWalletAddress }) => {
     if (!careerPlan) return [];
     
     if (viewMode === 'overview') {
-      // 在概览模式下，只显示根节点到年份节点的边
       return careerPlan.edges.filter(edge => {
         const sourceNode = careerPlan.nodes.find(n => n.id === edge.source);
         const targetNode = careerPlan.nodes.find(n => n.id === edge.target);
         return sourceNode?.data.type === 'root' && targetNode?.data.type === 'year';
       });
     } else if (viewMode === 'year-detail' && focusedNodeId) {
-      // 在年份详情模式下，只显示选中年份节点到其里程碑的边
+      return careerPlan.edges.filter(edge => {
+        const sourceNode = careerPlan.nodes.find(n => n.id === edge.source);
+        const targetNode = careerPlan.nodes.find(n => n.id === edge.target);
+        return (
+          // 年份节点到里程碑的边
+          (edge.source === focusedNodeId && targetNode?.data.type === 'milestone') ||
+          // 已展开的里程碑的子树边
+          (sourceNode?.id.startsWith(`${focusedNodeId}-subtree`) && 
+           targetNode?.id.startsWith(`${focusedNodeId}-subtree`))
+        );
+      });
+    } else if (viewMode === 'milestone-detail' && focusedNodeId) {
       return careerPlan.edges.filter(edge => 
-        edge.source === focusedNodeId && 
-        careerPlan.nodes.find(n => n.id === edge.target)?.data.type === 'milestone'
+        edge.source.startsWith(`${focusedNodeId}-subtree`) || 
+        edge.target.startsWith(`${focusedNodeId}-subtree`)
       );
     }
     
@@ -584,6 +800,35 @@ const Output = ({ userWalletAddress }) => {
 
   const toggleStudyProgress = () => {
     setIsStudyProgressOpen(!isStudyProgressOpen);
+  };
+
+  const handleMove = useCallback((event, viewport) => {
+    setViewport(viewport);
+    // 更新根节点位置
+    if (careerPlan) {
+      const rootNode = careerPlan.nodes.find(node => node.data.type === 'root');
+      if (rootNode) {
+        const newX = rootNode.position.x * viewport.zoom + viewport.x;
+        const newY = rootNode.position.y * viewport.zoom + viewport.y;
+        setRootNodePosition({ x: newX, y: newY });
+      }
+    }
+  }, [careerPlan]);
+
+  const handleMoveEnd = useCallback(() => {
+    if (!reactFlowInstance) return;
+    
+    // 使用 fitView 确保所有可见节点都在视图中
+    reactFlowInstance.fitView({
+      padding: 0.2,
+      duration: 300,
+      includeHiddenNodes: false
+    });
+  }, [reactFlowInstance]);
+
+  // nodeTypes 需要在组件内部定义，才能访问 loadingNode
+  const nodeTypes = {
+    custom: (props) => <CustomNode {...props} isLoading={props.id === loadingNode} />,
   };
 
   if (loading) {
@@ -613,14 +858,27 @@ const Output = ({ userWalletAddress }) => {
   return (
     <div className="app">
       <section className="output-container">
-        {historyStack.length > 0 && (
-          <button
-            className="back-button"
-            onClick={handleBack}
-          >
-            Go Back
-          </button>
-        )}
+        <div className="navigation-controls">
+          <div className="breadcrumb">
+            <button 
+              className="breadcrumb-item home"
+              onClick={() => navigateToBreadcrumb(-1)}
+            >
+              🏠
+            </button>
+            {breadcrumbs.map((crumb, index) => (
+              <React.Fragment key={crumb.id}>
+                <span className="breadcrumb-separator">/</span>
+                <button 
+                  className="breadcrumb-item"
+                  onClick={() => navigateToBreadcrumb(index)}
+                >
+                  {crumb.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
 
         <div className="tree">
           <ReactFlowProvider>
@@ -629,9 +887,18 @@ const Output = ({ userWalletAddress }) => {
               edges={filterFocusedEdges()}
               onNodeClick={handleNodeClick}
               onInit={setReactFlowInstance}
+              onMoveEnd={handleMoveEnd}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
+              minZoom={0.5}
+              maxZoom={1.5}
+              panOnDrag={false}
               fitView
+              fitViewOptions={{
+                padding: 0.2,
+                includeHiddenNodes: false,
+                duration: 300
+              }}
               proOptions={{ account: "paid" }}
               defaultEdgeOptions={{
                 type: 'custom',
