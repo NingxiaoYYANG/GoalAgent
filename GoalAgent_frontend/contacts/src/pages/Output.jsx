@@ -1,20 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import ReactFlow, { ReactFlowProvider, Background, Controls, useReactFlow } from 'reactflow';
+import 'reactflow/dist/style.css';
 import '../pages/Output.css';
 import skillIcon from '../Monster/purple_icon.png';
 import learnIcon from '../Monster/red_icon.png';
 import iniEgg from '../Monster/egg.png';
-import Open from '../Background/Open.png';  
+import Open from '../Background/Open.png';
 import Loading from '../Background/loading.gif';
 import monsterNFT from '../Monster/AIGC-image-Goalagent/robotic_white.png';
 import BigButton from '../components/BigButton';
-import Tree from 'react-d3-tree';
-
-// web3 related
 import { ethers } from 'ethers';
 import AIGC_NFT_ABI from '../contractABI/AIGC_NFT_ABI.json';
 
+
+
 const Output = ({ userWalletAddress }) => {
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+
   const [careerPlan, setCareerPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [completedNodes, setCompletedNodes] = useState({});
@@ -22,150 +25,39 @@ const Output = ({ userWalletAddress }) => {
   const [isStudyProgressOpen, setIsStudyProgressOpen] = useState(false);
   const [unlockProgress, setUnlockProgress] = useState(0);
   const [walletConnected, setWalletConnected] = useState(false);
-  const [userData, setUserData] = useState({
-    questionnaire: null,
-    category_scores: null,
-    category_selection: null,
-    career_selection: null,
-    userInput: null
-  });
-
-  // For connecting to NFT solidity contract
+  const [focusedNodeId, setFocusedNodeId] = useState(null);
+  const [historyStack, setHistoryStack] = useState([]);
   const contractAddress = '0x31e6c3b577a73afb176d925c7a6319c40128fc27';
 
   useEffect(() => {
-    // Debug: Log all localStorage data
-    console.log('=== Debug: LocalStorage Data ===');
-    console.log('userWalletAddress:', userWalletAddress);
-    
-    // Load all user data from localStorage
-    const storedData = {
-      careerPlan: localStorage.getItem('careerPlan'),
-      nodeCompletion: localStorage.getItem('nodeCompletion'),
-      questionnaire: localStorage.getItem('questionnaire'),
-      category_scores: localStorage.getItem('category_scores'),
-      category_selection: localStorage.getItem('category_selection'),
-      career_selection: localStorage.getItem('career_selection'),
-      userInput: localStorage.getItem('userInput')
-    };
-    
-    console.log('careerPlan:', storedData.careerPlan);
-    console.log('nodeCompletion:', storedData.nodeCompletion);
-    console.log('questionnaire:', storedData.questionnaire);
-    console.log('category_scores:', storedData.category_scores);
-    console.log('category_selection:', storedData.category_selection);
-    console.log('career_selection:', storedData.category_selection);
-    console.log('userInput:', storedData.userInput);
-    console.log('================================');
-    
-    // Parse and set user data
-    const parsedData = {};
-    Object.keys(storedData).forEach(key => {
-      if (storedData[key]) {
-        try {
-          parsedData[key] = JSON.parse(storedData[key]);
-        } catch (e) {
-          console.error(`Error parsing ${key}:`, e);
-          parsedData[key] = null;
-        }
-      } else {
-        parsedData[key] = null;
-      }
-    });
-    
-    setUserData(parsedData);
-    console.log('Parsed user data:', parsedData);
+    const storedPlan = localStorage.getItem('careerPlan');
+    if (storedPlan) {
+      const parsedPlan = JSON.parse(storedPlan);
+      setCareerPlan(transformCareerPlanToFlow(parsedPlan));
+    } else {
+      const defaultPlan = createDefaultCareerPlan();
+      setCareerPlan(transformCareerPlanToFlow(defaultPlan));
+    }
 
-    // Check if wallet is connected
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            setWalletConnected(true);
-            console.log('Wallet connected:', accounts[0]);
-          }
-        } catch (error) {
-          console.error('Error checking wallet connection:', error);
-        }
-      }
-    };
+    const savedCompletion = localStorage.getItem('nodeCompletion');
+    if (savedCompletion) {
+      setCompletedNodes(JSON.parse(savedCompletion));
+    }
 
     checkWalletConnection();
+    setLoading(false);
   }, [userWalletAddress]);
 
-  useEffect(() => {
-    // Load career plan and completion status from localStorage
-    const savedPlan = localStorage.getItem('careerPlan');
-    const savedCompletion = localStorage.getItem('nodeCompletion');
-    
-    // Debug: Log parsed data
-    console.log('=== Debug: Parsed Data ===');
-    if (savedPlan) {
-      const parsedPlan = JSON.parse(savedPlan);
-      console.log('Parsed careerPlan:', parsedPlan);
-      
-      // Transform the career plan into a proper tree structure
-      const treeStructure = transformCareerPlanToTree(parsedPlan);
-      console.log('Transformed tree structure:', treeStructure);
-      
-      setCareerPlan(treeStructure);
-    } else {
-      // Create a default career plan if none exists
-      const defaultPlan = createDefaultCareerPlan();
-      console.log('Default careerPlan:', defaultPlan);
-      setCareerPlan(defaultPlan);
+  const checkWalletConnection = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) setWalletConnected(true);
+      } catch (error) {
+        console.error('Wallet connection error:', error);
+      }
     }
-    
-    if (savedCompletion) {
-      const parsedCompletion = JSON.parse(savedCompletion);
-      console.log('Parsed nodeCompletion:', parsedCompletion);
-      setCompletedNodes(parsedCompletion);
-    }
-    console.log('===========================');
-    
-    setLoading(false);
-  }, []);
-
-  // Transform career plan into a proper tree structure for react-d3-tree
-  const transformCareerPlanToTree = (plan) => {
-    if (!plan) return createDefaultCareerPlan();
-    
-    // Create a deep copy of the plan
-    const treeStructure = JSON.parse(JSON.stringify(plan));
-    
-    // Process each year node
-    if (treeStructure.children) {
-      treeStructure.children = treeStructure.children.map(year => {
-        // Create a new year node with proper structure
-        const yearNode = {
-          id: year.id,
-          name: year.name,
-          description: year.description,
-          children: []
-        };
-        
-        // Add milestones as children of the year node
-        if (year.milestones && year.milestones.length > 0) {
-          yearNode.children = year.milestones.map(milestone => ({
-            id: milestone.id,
-            name: milestone.name,
-            description: milestone.description,
-            skills: milestone.skills,
-            resources: milestone.resources,
-            achievements: milestone.achievements,
-            children: milestone.children || [] // Include skill children if they exist
-          }));
-        }
-        
-        return yearNode;
-      });
-    }
-    
-    return treeStructure;
   };
-
-  // Create a default career plan
   const createDefaultCareerPlan = () => {
     return {
       name: "Career Path",
@@ -228,13 +120,145 @@ const Output = ({ userWalletAddress }) => {
     };
   };
 
-  // Initialize provider and contract only when wallet is connected
+  const transformCareerPlanToFlow = (plan) => {
+    let nodes = [];
+    let edges = [];
+    let globalX = 0;
+  
+    const traverse = (node, parentId = null, depth = 0) => {
+      if (!node || !node.name) return;
+  
+      const id = node.id || node.name || `node-${Math.random().toString(36).substr(2, 9)}`;
+  
+      nodes.push({
+        id,
+        data: { label: node.name, skills: node.skills || [] },
+        position: { x: globalX * 300, y: depth * 350 }
+      });
+  
+      if (parentId) {
+        edges.push({
+          id: `${parentId}-${id}`,
+          source: parentId,
+          target: id
+        });
+      }
+  
+      if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+        node.children.forEach((child) => {
+          globalX++;
+          traverse(child, id, depth + 1);
+        });
+      }
+    };
+  
+    traverse(plan);
+  
+    return { nodes, edges };
+  };
+  
+  const defaultCareerPlan = {
+    name: "Career Path",
+      children: [
+        {
+          name: "Year 1",
+          skills: ["HTML", "CSS", "JavaScript", "React", "Node.js", "Git"],
+          children: [
+            {
+              name: "Frontend Basics",
+              skills: ["HTML", "CSS", "JavaScript"]
+            },
+            {
+              name: "Frontend Framework",
+              skills: ["React", "Redux", "TypeScript"]
+            },
+            {
+              name: "Backend Basics",
+              skills: ["Node.js", "Express", "MongoDB"]
+            }
+          ]
+        },
+        {
+          name: "Year 2",
+          skills: ["System Design", "Cloud Services", "DevOps", "Testing", "Security"],
+          children: [
+            {
+              name: "Advanced Frontend",
+              skills: ["Next.js", "GraphQL", "WebSocket"]
+            },
+            {
+              name: "Advanced Backend",
+              skills: ["Microservices", "Docker", "Kubernetes"]
+            },
+            {
+              name: "DevOps",
+              skills: ["CI/CD", "AWS", "Monitoring"]
+            }
+          ]
+        },
+        {
+          name: "Year 3",
+          skills: ["Architecture", "Leadership", "Innovation", "Research", "Mentoring"],
+          children: [
+            {
+              name: "System Architecture",
+              skills: ["Distributed Systems", "Scalability", "Performance"]
+            },
+            {
+              name: "Cloud & DevOps",
+              skills: ["Multi-cloud", "Infrastructure as Code", "Automation"]
+            },
+            {
+              name: "Expert Level",
+              skills: ["Research", "Innovation", "Leadership"]
+            }
+          ]
+        }
+      ]
+  };
+  const { nodes, edges } = transformCareerPlanToFlow(defaultCareerPlan);
+
+  
+
   const getContract = () => {
     if (!window.ethereum || !walletConnected) return null;
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     return new ethers.Contract(contractAddress, AIGC_NFT_ABI, provider.getSigner());
   };
 
+  const collectNFT = async () => {
+    if (!walletConnected) {
+      console.log('Wallet not connected, cannot collect NFT');
+      alert('Please connect your wallet first');
+      return;
+    }
+  
+    console.log('=== Debug: NFT Collection ===');
+    console.log('Wallet address:', userWalletAddress);
+    console.log('Contract address:', contractAddress);
+  
+    try {
+      const contract = getContract();
+      if (!contract) {
+        throw new Error('Contract not initialized');
+      }
+      console.log('Contract initialized successfully');
+  
+      const transaction = await contract.transferFrom(contractAddress, userWalletAddress, 5);
+      console.log('Transaction sent:', transaction.hash);
+  
+      await transaction.wait();
+      console.log('Transaction confirmed');
+  
+      setIsCollected(true);
+      console.log('NFT collected successfully');
+    } catch (error) {
+      console.error('Error collecting NFT:', error);
+      alert('Failed to collect NFT. Please try again.');
+    }
+    console.log('===========================');
+  };
+  
   // Check if a node and all its children are completed
   const isNodeCompleted = (node) => {
     if (!node) return false;
@@ -251,7 +275,6 @@ const Output = ({ userWalletAddress }) => {
     return node.children.every(child => isNodeCompleted(child));
   };
 
-  // Calculate unlock progress based on completed year nodes
   const calculateUnlockProgress = () => {
     if (!careerPlan) return 0;
     
@@ -269,7 +292,6 @@ const Output = ({ userWalletAddress }) => {
     return progress;
   };
 
-  // Handle node completion
   const handleNodeComplete = async (nodeId) => {
     console.log('=== Debug: Node Completion ===');
     console.log('Completing node:', nodeId);
@@ -296,77 +318,67 @@ const Output = ({ userWalletAddress }) => {
     }
     console.log('===============================');
   };
+   
 
-  // Collect NFT
-  const collectNFT = async () => {
-    if (!walletConnected) {
-      console.log('Wallet not connected, cannot collect NFT');
-      alert('Please connect your wallet first');
-      return;
-    }
-
-    console.log('=== Debug: NFT Collection ===');
-    console.log('Wallet address:', userWalletAddress);
-    console.log('Contract address:', contractAddress);
-    
-    try {
-      const contract = getContract();
-      if (!contract) {
-        throw new Error('Contract not initialized');
+  const handleNodeClick = useCallback((event, node) => {
+    setHistoryStack(prev => [...prev, focusedNodeId]);
+    setFocusedNodeId(node.id);
+  
+    setTimeout(() => {
+      if (reactFlowInstance) {
+        const subtreeIds = findSubtree(node.id);
+        const visibleNodes = transformCareerPlanToFlow(defaultCareerPlan).nodes.filter(n => subtreeIds.has(n.id));
+        reactFlowInstance.fitView({ nodes: visibleNodes, padding: 0.2 });
       }
-      console.log('Contract initialized successfully');
+    }, 0);
+  }, [focusedNodeId, reactFlowInstance]);
 
-      const transaction = await contract.transferFrom(contractAddress, userWalletAddress, 5);
-      console.log('Transaction sent:', transaction.hash);
-      
-      await transaction.wait();
-      console.log('Transaction confirmed');
-      
-      setIsCollected(true);
-      console.log('NFT collected successfully');
-    } catch (error) {
-      console.error('Error collecting NFT:', error);
-      alert('Failed to collect NFT. Please try again.');
+  // const handleNodeClick = useCallback((event, node) => {
+  //   setHistoryStack(prev => [...prev, focusedNodeId]);
+  //   setFocusedNodeId(node.id);
+  // });
+
+  const findSubtree = (startId) => {
+    const result = new Set();
+    const explore = (id) => {
+      result.add(id);
+      transformCareerPlanToFlow(defaultCareerPlan).edges.forEach(edge => {
+        if (edge.source === id) {
+          explore(edge.target);
+        }
+      });
+    };
+    explore(startId);
+    return result;
+  };
+
+
+  const filterFocusedNodes = () => {
+    console.log(focusedNodeId)
+    console.log(focusedNodeId == null)
+    if (focusedNodeId == null) {
+      console.log('===no node fund=======');
+      return transformCareerPlanToFlow(defaultCareerPlan).nodes;
+      // return careerPlan.nodes; // Show full tree initially
     }
-    console.log('===========================');
+    console.log("121212")
+    console.log(transformCareerPlanToFlow(defaultCareerPlan).nodes);
+    const subtreeIds = findSubtree(focusedNodeId);
+    console.log(subtreeIds);
+    return transformCareerPlanToFlow(defaultCareerPlan).nodes.filter(node => subtreeIds.has(node.id));
+  };
+  
+  const filterFocusedEdges = () => {
+    
+    if (focusedNodeId == null) {
+      console.log('===no edge fund=======');
+      console.log(transformCareerPlanToFlow(defaultCareerPlan));
+      return transformCareerPlanToFlow(defaultCareerPlan).edges; // Show full tree initially
+    }
+    const subtreeIds = findSubtree(focusedNodeId);
+    return transformCareerPlanToFlow(defaultCareerPlan).edges.filter(edge => subtreeIds.has(edge.source) && subtreeIds.has(edge.target));
   };
 
-  // Render custom node element
-  const renderCustomNode = (nodeProps) => {
-    const { nodeDatum, toggleNode } = nodeProps;
-    const isCompleted = completedNodes[nodeDatum.name] || false;
-    const isSkillNode = nodeDatum.skills && !nodeDatum.children;
-    const radius = isSkillNode ? 40 : 60;
-
-    return (
-      <g onClick={toggleNode}>
-        <circle
-          r={radius}
-          fill={isCompleted ? "#4CAF50" : "#fff"}
-          stroke={isCompleted ? "#2E7D32" : "#2196F3"}
-          strokeWidth={2}
-        />
-        <text
-          dy=".35em"
-          x={radius + 10}
-          textAnchor="start"
-          style={{ fontSize: "12px", fill: "#333" }}
-        >
-          {nodeDatum.name}
-        </text>
-        {isSkillNode && nodeDatum.skills && (
-          <text
-            dy="1.5em"
-            x={radius + 10}
-            textAnchor="start"
-            style={{ fontSize: "10px", fill: "#666" }}
-          >
-            {nodeDatum.skills.join(", ")}
-          </text>
-        )}
-      </g>
-    );
-  };
 
   const toggleStudyProgress = () => {
     setIsStudyProgressOpen(!isStudyProgressOpen);
@@ -399,16 +411,44 @@ const Output = ({ userWalletAddress }) => {
   return (
     <div className="app">
       <section className="output-container">
+      {historyStack.length > 0 && (
+        <button
+          onClick={() => {
+            const prev = [...historyStack];
+            const lastFocused = prev.pop();
+            setHistoryStack(prev);
+            setFocusedNodeId(lastFocused);
+
+            setTimeout(() => {
+              if (lastFocused && reactFlowInstance) {
+                const subtreeIds = findSubtree(lastFocused);
+                const visibleNodes = transformCareerPlanToFlow(defaultCareerPlan).nodes.filter(n => subtreeIds.has(n.id));
+                reactFlowInstance.fitView({ nodes: visibleNodes, padding: 0.2 });
+              } else if (reactFlowInstance) {
+                reactFlowInstance.fitView({ padding: 0.2 }); // If no lastFocused, fit full tree
+              }
+            }, 0);
+
+          }}
+        >
+          Go Back
+        </button>
+      )}
+
         <div className="tree">
-          <Tree
-            data={careerPlan}
-            orientation="vertical"
-            translate={{ x: 550, y: 200 }}
-            renderCustomNodeElement={renderCustomNode}
-            zoomable={true}
-            draggable={true}
-            separation={{ siblings: 2, nonSiblings: 2.5 }}
-          />
+          <ReactFlowProvider>
+            <ReactFlow
+              nodes={filterFocusedNodes()}
+              edges={filterFocusedEdges()}
+              onNodeClick={handleNodeClick}
+              onInit={setReactFlowInstance}
+              fitView
+              proOptions={{ account: "paid" }}
+            >
+              <Background />
+              <Controls />
+            </ReactFlow>
+          </ReactFlowProvider>
           <div className={`study_progress ${isStudyProgressOpen ? 'open' : ''}`}>
             {isStudyProgressOpen && (
               <div className="monster-content">
@@ -431,10 +471,7 @@ const Output = ({ userWalletAddress }) => {
                     <img src={iniEgg} alt="Initial Egg" className="ini-egg-image" />
                     <p className="ini-egg-text">Complete all milestones to unlock your NFT</p>
                     <div className="progress-bar">
-                      <div 
-                        className="progress-fill"
-                        style={{ width: `${unlockProgress}%` }}
-                      />
+                      <div className="progress-fill" style={{ width: `${unlockProgress}%` }} />
                     </div>
                     <p className="progress-text">{Math.round(unlockProgress)}% Complete</p>
                   </div>
@@ -443,6 +480,7 @@ const Output = ({ userWalletAddress }) => {
             )}
           </div>
         </div>
+
         <img
           src={Open}
           className={`toggle-button ${isStudyProgressOpen ? 'open' : ''}`}
