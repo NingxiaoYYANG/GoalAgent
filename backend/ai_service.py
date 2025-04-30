@@ -1,78 +1,42 @@
-import requests
 import os
-from dotenv import load_dotenv
 import json
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-# Load environment variables from .env file
 load_dotenv()
 
 class AIService:
     def __init__(self):
-        # Get API key from environment variable
-        self.api_key = os.getenv('HUGGINGFACE_API_KEY')
+        # Configure Google API
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
-            raise ValueError("HUGGINGFACE_API_KEY environment variable is not set")
-        
-        # API endpoint for the model
-        self.api_url = "https://api-inference.huggingface.co/models/bigscience/bloom-560m"
-        
-        # Headers for the API request
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+            raise ValueError("GOOGLE_API_KEY environment variable is not set")
+
+        genai.configure(api_key=self.api_key)
+        self.model = genai.GenerativeModel("gemini-pro")
 
     def generate_career_path(self, user_data):
         """
         Generate career path recommendations based on user data
         """
-        # Prepare the prompt with user data
         prompt = self._prepare_prompt(user_data)
-        
-        # Prepare the payload for the API request
-        payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": 1500,  # Increased to allow for more detailed responses
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "do_sample": True,
-                "return_full_text": False
-            }
-        }
-        
-        # Make the API request
+
         try:
-            response = requests.post(self.api_url, headers=self.headers, json=payload)
-            response.raise_for_status()  # Raise an exception for bad status codes
-            
-            # Parse the response
-            result = response.json()
-            
-            # Extract the generated text
-            generated_text = result[0]['generated_text']
-            
-            # Parse the JSON response
-            try:
-                # Find the JSON part in the response
-                json_start = generated_text.find('{')
-                json_end = generated_text.rfind('}') + 1
-                if json_start >= 0 and json_end > json_start:
-                    json_str = generated_text[json_start:json_end]
-                    career_path = json.loads(json_str)
-                    
-                    # Validate and enhance the career path
-                    return self._validate_and_enhance_career_path(career_path, user_data)
-                else:
-                    # If no JSON found, create a default structure
-                    return self._create_default_career_path(user_data)
-            except json.JSONDecodeError as e:
-                print(f"Error parsing JSON response: {e}")
-                print(f"Raw response: {generated_text}")
+            response = self.model.generate_content(prompt)
+            generated_text = response.text
+
+            json_start = generated_text.find('{')
+            json_end = generated_text.rfind('}') + 1
+
+            if json_start >= 0 and json_end > json_start:
+                json_str = generated_text[json_start:json_end]
+                career_path = json.loads(json_str)
+                return self._validate_and_enhance_career_path(career_path, user_data)
+            else:
                 return self._create_default_career_path(user_data)
-                
-        except requests.exceptions.RequestException as e:
-            print(f"Error making API request: {e}")
+
+        except Exception as e:
+            print(f"Error in Gemini API call or response parsing: {e}")
             return self._create_default_career_path(user_data)
 
     def _validate_and_enhance_career_path(self, career_path, user_data):
