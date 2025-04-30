@@ -93,14 +93,50 @@ def generate_career_path():
         user_data = request.json
         logger.info(f"User data: {user_data}")
         
-        career_plan = ai_service.generate_career_path(user_data)
+        career_plan = ai_service.generate_outline(user_data)
         logger.info("Successfully generated career plan")
         
         response = jsonify(career_plan)
         response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
         return response
     except Exception as e:
-        logger.error(f"Error in generate_career_path: {str(e)}")
+        logger.error(f"Error in generate_outline: {str(e)}")
+        error_response = jsonify({'error': str(e)})
+        error_response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        return error_response, 500
+
+@app.route('/expand_milestone', methods=['POST', 'OPTIONS'])
+def expand_milestone():
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+
+    try:
+        logger.info("Received request to /expand_milestone")
+        data = request.json
+        logger.info(f"Request data: {data}")
+        
+        milestone_name = data.get('milestone_name')
+        logger.info(f"Milestone name: {milestone_name}")
+        
+        context = data.get('context', {})
+        logger.info(f"Context: {context}")
+        
+        if not milestone_name:
+            logger.error("Missing milestone_name in request")
+            return jsonify({'error': 'milestone_name is required'}), 400
+
+        result = ai_service.expand_milestone(milestone_name, context)
+        logger.info("Successfully expanded milestone")
+        response = jsonify(result)
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        return response
+    except Exception as e:
+        logger.error(f"Error in expand_milestone: {str(e)}")
         error_response = jsonify({'error': str(e)})
         error_response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
         return error_response, 500

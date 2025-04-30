@@ -1,6 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import ReactFlow, { ReactFlowProvider, Background, Controls, useReactFlow } from 'reactflow';
+import ReactFlow, { 
+  ReactFlowProvider, 
+  Background, 
+  Controls, 
+  useReactFlow,
+  MarkerType,
+  EdgeTypes,
+  getSmoothStepPath,
+  Position,
+  Handle
+} from 'reactflow';
 import 'reactflow/dist/style.css';
 import '../pages/Output.css';
 import skillIcon from '../Monster/purple_icon.png';
@@ -13,11 +23,80 @@ import BigButton from '../components/BigButton';
 import { ethers } from 'ethers';
 import AIGC_NFT_ABI from '../contractABI/AIGC_NFT_ABI.json';
 
+// 自定义边样式
+const CustomEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+}) => {
+  const [edgePath] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
 
+  return (
+    <path
+      id={id}
+      style={{
+        ...style,
+        strokeWidth: 2,
+        stroke: '#555',
+      }}
+      className="react-flow__edge-path"
+      d={edgePath}
+      markerEnd={markerEnd}
+    />
+  );
+};
+
+const edgeTypes = {
+  custom: CustomEdge,
+};
+
+// 自定义节点样式
+const CustomNode = ({ data }) => {
+  return (
+    <div className={`custom-node ${data.type}`}>
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ background: '#555' }}
+      />
+      <div className="node-content">
+        <div className="node-label">{data.label}</div>
+        {data.skills && data.skills.length > 0 && (
+          <div className="node-skills">
+            {data.skills.map((skill, index) => (
+              <span key={index} className="skill-tag">{skill}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ background: '#555' }}
+      />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  custom: CustomNode,
+};
 
 const Output = ({ userWalletAddress }) => {
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-
   const [careerPlan, setCareerPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [completedNodes, setCompletedNodes] = useState({});
@@ -27,13 +106,26 @@ const Output = ({ userWalletAddress }) => {
   const [walletConnected, setWalletConnected] = useState(false);
   const [focusedNodeId, setFocusedNodeId] = useState(null);
   const [historyStack, setHistoryStack] = useState([]);
+  const [expandedNodes, setExpandedNodes] = useState({});
+  const [loadingNode, setLoadingNode] = useState(null);
+  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'year-detail'
   const contractAddress = '0x31e6c3b577a73afb176d925c7a6319c40128fc27';
 
   useEffect(() => {
     const storedPlan = localStorage.getItem('careerPlan');
+    console.log('Stored plan:', storedPlan);
     if (storedPlan) {
-      const parsedPlan = JSON.parse(storedPlan);
-      setCareerPlan(transformCareerPlanToFlow(parsedPlan));
+      try {
+        const parsedPlan = JSON.parse(storedPlan);
+        console.log('Parsed plan:', parsedPlan);
+        const flowData = transformCareerPlanToFlow(parsedPlan);
+        console.log('Transformed flow data:', flowData);
+        setCareerPlan(flowData);
+      } catch (error) {
+        console.error('Error parsing stored plan:', error);
+        const defaultPlan = createDefaultCareerPlan();
+        setCareerPlan(transformCareerPlanToFlow(defaultPlan));
+      }
     } else {
       const defaultPlan = createDefaultCareerPlan();
       setCareerPlan(transformCareerPlanToFlow(defaultPlan));
@@ -121,104 +213,110 @@ const Output = ({ userWalletAddress }) => {
   };
 
   const transformCareerPlanToFlow = (plan) => {
+    console.log('Transforming plan:', plan);
     let nodes = [];
     let edges = [];
     let globalX = 0;
   
-    const traverse = (node, parentId = null, depth = 0) => {
+    const traverse = (node, parentId = null, depth = 0, xOffset = 0) => {
       if (!node || !node.name) return;
   
       const id = node.id || node.name || `node-${Math.random().toString(36).substr(2, 9)}`;
+      const nodeType = depth === 0 ? 'root' : 
+                      depth === 1 ? 'year' : 
+                      depth === 2 ? 'milestone' : 'skill';
   
-      nodes.push({
+      const newNode = {
         id,
-        data: { label: node.name, skills: node.skills || [] },
-        position: { x: globalX * 300, y: depth * 350 }
-      });
+        type: 'custom',
+        data: { 
+          label: node.name, 
+          skills: node.skills || [],
+          type: nodeType,
+          year: depth === 1 ? node.name : null,
+          specialization: node.specialization || '',
+          description: node.description || ''
+        },
+        position: { x: xOffset * 300, y: depth * 350 },
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top
+      };
+      
+      console.log('Creating node:', newNode);
+      nodes.push(newNode);
   
       if (parentId) {
-        edges.push({
+        const newEdge = {
           id: `${parentId}-${id}`,
           source: parentId,
-          target: id
-        });
+          target: id,
+          type: 'custom',
+          animated: false,
+          style: { stroke: '#555' },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 20,
+            height: 20,
+            color: '#555',
+          },
+          sourceHandle: 'source',
+          targetHandle: 'target'
+        };
+        console.log('Creating edge:', newEdge);
+        edges.push(newEdge);
       }
   
       if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-        node.children.forEach((child) => {
-          globalX++;
-          traverse(child, id, depth + 1);
+        node.children.forEach((child, index) => {
+          traverse(child, id, depth + 1, xOffset + index);
+        });
+      }
+  
+      // Handle milestones array if it exists
+      if (node.milestones && Array.isArray(node.milestones)) {
+        node.milestones.forEach((milestone, index) => {
+          const milestoneId = `${id}-milestone-${index}`;
+          const milestoneNode = {
+            id: milestoneId,
+            type: 'custom',
+            data: {
+              label: milestone,
+              type: 'milestone',
+              parentNode: id
+            },
+            position: { x: xOffset * 300 + (index * 200), y: (depth + 1) * 350 },
+            sourcePosition: Position.Bottom,
+            targetPosition: Position.Top
+          };
+          nodes.push(milestoneNode);
+          
+          const milestoneEdge = {
+            id: `${id}-${milestoneId}`,
+            source: id,
+            target: milestoneId,
+            type: 'custom',
+            animated: false,
+            style: { stroke: '#555' },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 20,
+              height: 20,
+              color: '#555',
+            },
+            sourceHandle: 'source',
+            targetHandle: 'target'
+          };
+          edges.push(milestoneEdge);
         });
       }
     };
   
     traverse(plan);
+    console.log('Final nodes:', nodes);
+    console.log('Final edges:', edges);
   
     return { nodes, edges };
   };
-  
-  const defaultCareerPlan = {
-    name: "Career Path",
-      children: [
-        {
-          name: "Year 1",
-          skills: ["HTML", "CSS", "JavaScript", "React", "Node.js", "Git"],
-          children: [
-            {
-              name: "Frontend Basics",
-              skills: ["HTML", "CSS", "JavaScript"]
-            },
-            {
-              name: "Frontend Framework",
-              skills: ["React", "Redux", "TypeScript"]
-            },
-            {
-              name: "Backend Basics",
-              skills: ["Node.js", "Express", "MongoDB"]
-            }
-          ]
-        },
-        {
-          name: "Year 2",
-          skills: ["System Design", "Cloud Services", "DevOps", "Testing", "Security"],
-          children: [
-            {
-              name: "Advanced Frontend",
-              skills: ["Next.js", "GraphQL", "WebSocket"]
-            },
-            {
-              name: "Advanced Backend",
-              skills: ["Microservices", "Docker", "Kubernetes"]
-            },
-            {
-              name: "DevOps",
-              skills: ["CI/CD", "AWS", "Monitoring"]
-            }
-          ]
-        },
-        {
-          name: "Year 3",
-          skills: ["Architecture", "Leadership", "Innovation", "Research", "Mentoring"],
-          children: [
-            {
-              name: "System Architecture",
-              skills: ["Distributed Systems", "Scalability", "Performance"]
-            },
-            {
-              name: "Cloud & DevOps",
-              skills: ["Multi-cloud", "Infrastructure as Code", "Automation"]
-            },
-            {
-              name: "Expert Level",
-              skills: ["Research", "Innovation", "Leadership"]
-            }
-          ]
-        }
-      ]
-  };
-  const { nodes, edges } = transformCareerPlanToFlow(defaultCareerPlan);
-
-  
 
   const getContract = () => {
     if (!window.ethereum || !walletConnected) return null;
@@ -233,30 +331,30 @@ const Output = ({ userWalletAddress }) => {
       return;
     }
   
-    console.log('=== Debug: NFT Collection ===');
-    console.log('Wallet address:', userWalletAddress);
-    console.log('Contract address:', contractAddress);
+    // console.log('=== Debug: NFT Collection ===');
+    // console.log('Wallet address:', userWalletAddress);
+    // console.log('Contract address:', contractAddress);
   
     try {
       const contract = getContract();
       if (!contract) {
         throw new Error('Contract not initialized');
       }
-      console.log('Contract initialized successfully');
+      // console.log('Contract initialized successfully');
   
       const transaction = await contract.transferFrom(contractAddress, userWalletAddress, 5);
-      console.log('Transaction sent:', transaction.hash);
+      // console.log('Transaction sent:', transaction.hash);
   
       await transaction.wait();
-      console.log('Transaction confirmed');
+      // console.log('Transaction confirmed');
   
       setIsCollected(true);
-      console.log('NFT collected successfully');
+      // console.log('NFT collected successfully');
     } catch (error) {
       console.error('Error collecting NFT:', error);
       alert('Failed to collect NFT. Please try again.');
     }
-    console.log('===========================');
+    // console.log('===========================');
   };
   
   // Check if a node and all its children are completed
@@ -320,65 +418,169 @@ const Output = ({ userWalletAddress }) => {
   };
    
 
+  const fetchMilestoneDetails = async (nodeId, nodeData) => {
+    try {
+      setLoadingNode(nodeId);
+      console.log('Node data received:', nodeData);
+      
+      const requestData = {
+        milestone_name: nodeData.label,
+        context: {
+          career_path: careerPlan?.name || 'Web Development',
+          specialization: nodeData.specialization || '',
+          year: nodeData.year || '',
+          parent_node: nodeData.parentNode || '',
+          node_type: nodeData.type || 'milestone'
+        }
+      };
+      
+      console.log('Sending request to expand_milestone:', requestData);
+      console.log('Request data milestone_name:', requestData.milestone_name);
+      
+      const response = await fetch('http://localhost:5000/expand_milestone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      const responseData = await response.json();
+      console.log('Received milestone details:', responseData);
+
+      if (!response.ok) {
+        console.error('Error response:', responseData);
+        throw new Error(`Failed to fetch milestone details: ${responseData.error || response.statusText}`);
+      }
+
+      if (responseData.error) {
+        console.error('Error in response data:', responseData.error);
+        throw new Error(responseData.error);
+      }
+
+      if (!responseData.skills || !Array.isArray(responseData.skills)) {
+        console.error('Invalid response format:', responseData);
+        throw new Error('Invalid response format: missing skills array');
+      }
+      
+      // 创建技能节点
+      const skillNodes = responseData.skills.map((skill, index) => ({
+        id: `${nodeId}-skill-${index}`,
+        data: { 
+          label: skill,
+          type: 'skill',
+          parentNode: nodeId
+        },
+        position: { 
+          x: nodeData.position.x + 300, 
+          y: nodeData.position.y + (index * 100)
+        }
+      }));
+
+      // 创建技能节点到父节点的边
+      const skillEdges = skillNodes.map((skillNode, index) => ({
+        id: `${nodeId}-${skillNode.id}`,
+        source: nodeId,
+        target: skillNode.id
+      }));
+
+      // 更新节点和边
+      setCareerPlan(prev => {
+        const newNodes = [...prev.nodes, ...skillNodes];
+        const newEdges = [...prev.edges, ...skillEdges];
+        return { nodes: newNodes, edges: newEdges };
+      });
+
+      // 记录已展开的节点
+      setExpandedNodes(prev => ({
+        ...prev,
+        [nodeId]: true
+      }));
+
+    } catch (error) {
+      console.error('Error fetching milestone details:', error);
+      // 可以在这里添加错误提示UI
+    } finally {
+      setLoadingNode(null);
+    }
+  };
+
   const handleNodeClick = useCallback((event, node) => {
-    setHistoryStack(prev => [...prev, focusedNodeId]);
-    setFocusedNodeId(node.id);
+    console.log('Clicked node:', node);
+    
+    if (node.data.type === 'year') {
+      setViewMode('year-detail');
+      setFocusedNodeId(node.id);
+      setHistoryStack(prev => [...prev, { mode: 'overview', nodeId: null }]);
+    } else if (node.data.type === 'root') {
+      setViewMode('overview');
+      setFocusedNodeId(null);
+    }
   
     setTimeout(() => {
       if (reactFlowInstance) {
-        const subtreeIds = findSubtree(node.id);
-        const visibleNodes = transformCareerPlanToFlow(defaultCareerPlan).nodes.filter(n => subtreeIds.has(n.id));
+        const visibleNodes = filterFocusedNodes();
         reactFlowInstance.fitView({ nodes: visibleNodes, padding: 0.2 });
       }
     }, 0);
-  }, [focusedNodeId, reactFlowInstance]);
+  }, [reactFlowInstance, viewMode]);
 
-  // const handleNodeClick = useCallback((event, node) => {
-  //   setHistoryStack(prev => [...prev, focusedNodeId]);
-  //   setFocusedNodeId(node.id);
-  // });
+  const handleBack = () => {
+    if (historyStack.length > 0) {
+      const prev = [...historyStack];
+      const lastState = prev.pop();
+      setHistoryStack(prev);
+      setViewMode(lastState.mode);
+      setFocusedNodeId(lastState.nodeId);
 
-  const findSubtree = (startId) => {
-    const result = new Set();
-    const explore = (id) => {
-      result.add(id);
-      transformCareerPlanToFlow(defaultCareerPlan).edges.forEach(edge => {
-        if (edge.source === id) {
-          explore(edge.target);
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          const visibleNodes = filterFocusedNodes();
+          reactFlowInstance.fitView({ nodes: visibleNodes, padding: 0.2 });
         }
-      });
-    };
-    explore(startId);
-    return result;
+      }, 0);
+    }
   };
 
-
   const filterFocusedNodes = () => {
-    console.log(focusedNodeId)
-    console.log(focusedNodeId == null)
-    if (focusedNodeId == null) {
-      console.log('===no node fund=======');
-      return transformCareerPlanToFlow(defaultCareerPlan).nodes;
-      // return careerPlan.nodes; // Show full tree initially
+    if (!careerPlan) return [];
+    
+    if (viewMode === 'overview') {
+      // 在概览模式下，只显示根节点和年份节点
+      return careerPlan.nodes.filter(node => 
+        node.data.type === 'root' || node.data.type === 'year'
+      );
+    } else if (viewMode === 'year-detail' && focusedNodeId) {
+      // 在年份详情模式下，只显示选中的年份节点和其里程碑
+      return careerPlan.nodes.filter(node => 
+        node.id === focusedNodeId || 
+        (node.data.type === 'milestone' && node.data.parentNode === focusedNodeId)
+      );
     }
-    console.log("121212")
-    console.log(transformCareerPlanToFlow(defaultCareerPlan).nodes);
-    const subtreeIds = findSubtree(focusedNodeId);
-    console.log(subtreeIds);
-    return transformCareerPlanToFlow(defaultCareerPlan).nodes.filter(node => subtreeIds.has(node.id));
+    
+    return careerPlan.nodes;
   };
   
   const filterFocusedEdges = () => {
+    if (!careerPlan) return [];
     
-    if (focusedNodeId == null) {
-      console.log('===no edge fund=======');
-      console.log(transformCareerPlanToFlow(defaultCareerPlan));
-      return transformCareerPlanToFlow(defaultCareerPlan).edges; // Show full tree initially
+    if (viewMode === 'overview') {
+      // 在概览模式下，只显示根节点到年份节点的边
+      return careerPlan.edges.filter(edge => {
+        const sourceNode = careerPlan.nodes.find(n => n.id === edge.source);
+        const targetNode = careerPlan.nodes.find(n => n.id === edge.target);
+        return sourceNode?.data.type === 'root' && targetNode?.data.type === 'year';
+      });
+    } else if (viewMode === 'year-detail' && focusedNodeId) {
+      // 在年份详情模式下，只显示选中年份节点到其里程碑的边
+      return careerPlan.edges.filter(edge => 
+        edge.source === focusedNodeId && 
+        careerPlan.nodes.find(n => n.id === edge.target)?.data.type === 'milestone'
+      );
     }
-    const subtreeIds = findSubtree(focusedNodeId);
-    return transformCareerPlanToFlow(defaultCareerPlan).edges.filter(edge => subtreeIds.has(edge.source) && subtreeIds.has(edge.target));
+    
+    return careerPlan.edges;
   };
-
 
   const toggleStudyProgress = () => {
     setIsStudyProgressOpen(!isStudyProgressOpen);
@@ -411,29 +613,14 @@ const Output = ({ userWalletAddress }) => {
   return (
     <div className="app">
       <section className="output-container">
-      {historyStack.length > 0 && (
-        <button
-          onClick={() => {
-            const prev = [...historyStack];
-            const lastFocused = prev.pop();
-            setHistoryStack(prev);
-            setFocusedNodeId(lastFocused);
-
-            setTimeout(() => {
-              if (lastFocused && reactFlowInstance) {
-                const subtreeIds = findSubtree(lastFocused);
-                const visibleNodes = transformCareerPlanToFlow(defaultCareerPlan).nodes.filter(n => subtreeIds.has(n.id));
-                reactFlowInstance.fitView({ nodes: visibleNodes, padding: 0.2 });
-              } else if (reactFlowInstance) {
-                reactFlowInstance.fitView({ padding: 0.2 }); // If no lastFocused, fit full tree
-              }
-            }, 0);
-
-          }}
-        >
-          Go Back
-        </button>
-      )}
+        {historyStack.length > 0 && (
+          <button
+            className="back-button"
+            onClick={handleBack}
+          >
+            Go Back
+          </button>
+        )}
 
         <div className="tree">
           <ReactFlowProvider>
@@ -442,13 +629,27 @@ const Output = ({ userWalletAddress }) => {
               edges={filterFocusedEdges()}
               onNodeClick={handleNodeClick}
               onInit={setReactFlowInstance}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               fitView
               proOptions={{ account: "paid" }}
+              defaultEdgeOptions={{
+                type: 'custom',
+                animated: false,
+                style: { stroke: '#555' },
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  width: 20,
+                  height: 20,
+                  color: '#555',
+                },
+              }}
             >
               <Background />
               <Controls />
             </ReactFlow>
           </ReactFlowProvider>
+
           <div className={`study_progress ${isStudyProgressOpen ? 'open' : ''}`}>
             {isStudyProgressOpen && (
               <div className="monster-content">

@@ -118,3 +118,116 @@ Tree {
   left: 0;
   margin: 20px;
 }
+
+.node-details {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  width: 300px;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.node-details h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.2em;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.node-details h4 {
+  color: #666;
+  margin: 15px 0 10px 0;
+  font-size: 1em;
+}
+
+.node-details ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.node-details li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  color: #444;
+}
+
+.node-details li:last-child {
+  border-bottom: none;
+}
+
+.node-details .loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.skills-section,
+.resources-section,
+.achievements-section {
+  margin-bottom: 20px;
+}
+
+.custom-node {
+  padding: 10px;
+  border-radius: 5px;
+  width: 200px;
+  font-size: 12px;
+  color: #222;
+  text-align: center;
+  border-width: 2px;
+  border-style: solid;
+  background: white;
+}
+
+.custom-node.root {
+  background: #ffd700;
+  border-color: #ffa500;
+}
+
+.custom-node.year {
+  background: #90caf9;
+  border-color: #1976d2;
+}
+
+.custom-node.milestone {
+  background: #a5d6a7;
+  border-color: #2e7d32;
+}
+
+.custom-node.skill {
+  background: #f8bbd0;
+  border-color: #c2185b;
+}
+
+.node-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.node-label {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.node-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.skill-tag {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
