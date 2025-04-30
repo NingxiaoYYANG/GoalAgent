@@ -240,37 +240,51 @@ const Output = ({ userWalletAddress }) => {
   };
 
   const transformCareerPlanToFlow = (plan) => {
+    // 兼容AI返回的结构
+    let normalizedPlan = plan;
+    if (plan.ultimate_goal && plan.children) {
+      normalizedPlan = {
+        name: plan.ultimate_goal.name,
+        description: plan.ultimate_goal.description,
+        type: 'root',
+        children: plan.children.map(year => ({
+          name: year.name,
+          description: year.description,
+          type: 'year',
+          children: (year.milestones || []).map(milestone => ({
+            name: milestone,
+            type: 'milestone',
+            // 可扩展：description/skills等
+          }))
+        }))
+      };
+    }
     let nodes = [];
     let edges = [];
     let globalX = 0;
-  
+
     const traverse = (node, parentId = null, depth = 0, xOffset = 0) => {
       if (!node || !node.name) return;
-  
       const id = node.id || node.name || `node-${Math.random().toString(36).substr(2, 9)}`;
-      const nodeType = depth === 0 ? 'root' : 
-                      depth === 1 ? 'year' : 
-                      depth === 2 ? 'milestone' : 'skill';
-  
+      const nodeType = node.type || (depth === 0 ? 'root' : depth === 1 ? 'year' : depth === 2 ? 'milestone' : 'skill');
       const newNode = {
         id,
         type: 'custom',
-        data: { 
-          label: node.name, 
+        data: {
+          label: node.name,
           skills: node.skills || [],
           type: nodeType,
           year: depth === 1 ? node.name : null,
           specialization: node.specialization || '',
           description: node.description || '',
-          difficulty: node.difficulty || 'medium'
+          difficulty: node.difficulty || 'medium',
+          parentNode: parentId
         },
         position: { x: xOffset * 300, y: depth * 350 },
         sourcePosition: Position.Bottom,
         targetPosition: Position.Top
       };
-      
       nodes.push(newNode);
-  
       if (parentId) {
         const newEdge = {
           id: `${parentId}-${id}`,
@@ -290,52 +304,13 @@ const Output = ({ userWalletAddress }) => {
         };
         edges.push(newEdge);
       }
-  
       if (node.children && Array.isArray(node.children) && node.children.length > 0) {
         node.children.forEach((child, index) => {
           traverse(child, id, depth + 1, xOffset + index);
         });
       }
-  
-      if (node.milestones && Array.isArray(node.milestones)) {
-        node.milestones.forEach((milestone, index) => {
-          const milestoneId = `${id}-milestone-${index}`;
-          const milestoneNode = {
-            id: milestoneId,
-            type: 'custom',
-            data: {
-              label: milestone,
-              type: 'milestone',
-              parentNode: id
-            },
-            position: { x: xOffset * 300 + (index * 200), y: (depth + 1) * 350 },
-            sourcePosition: Position.Bottom,
-            targetPosition: Position.Top
-          };
-          nodes.push(milestoneNode);
-          
-          const milestoneEdge = {
-            id: `${id}-${milestoneId}`,
-            source: id,
-            target: milestoneId,
-            type: 'custom',
-            animated: false,
-            style: { stroke: '#555' },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 20,
-              height: 20,
-              color: '#555',
-            },
-            sourceHandle: 'source',
-            targetHandle: 'target'
-          };
-          edges.push(milestoneEdge);
-        });
-      }
     };
-  
-    traverse(plan);
+    traverse(normalizedPlan);
     return { nodes, edges };
   };
 
@@ -500,7 +475,6 @@ const Output = ({ userWalletAddress }) => {
       if (focusedNodeId === node.id) {
         return;
       }
-
       setViewMode('year-detail');
       setFocusedNodeId(node.id);
       setHistoryStack(prev => [...prev, { mode: 'overview', nodeId: null }]);
@@ -509,7 +483,6 @@ const Output = ({ userWalletAddress }) => {
         nodeId: node.id,
         label: node.data.label 
       }]);
-      
       setTimeout(() => {
         if (reactFlowInstance) {
           reactFlowInstance.fitView({
@@ -523,7 +496,6 @@ const Output = ({ userWalletAddress }) => {
       setViewMode('overview');
       setFocusedNodeId(null);
       setBreadcrumbs([]);
-      
       setTimeout(() => {
         if (reactFlowInstance) {
           reactFlowInstance.fitView({
@@ -583,12 +555,15 @@ const Output = ({ userWalletAddress }) => {
           node.id,
           node.position // 传递milestone节点的position
         );
-
+        console.log('Generated newNodes:', newNodes);
+        console.log('Generated newEdges:', newEdges);
         setCareerPlan(prev => {
           const updatedNodes = prev.nodes.map(n => 
             n.id === node.id ? updatedNode : n
           ).concat(newNodes);
           const updatedEdges = prev.edges.concat(newEdges);
+          console.log('Updated nodes:', updatedNodes);
+          console.log('Updated edges:', updatedEdges);
           return { nodes: updatedNodes, edges: updatedEdges };
         });
 
@@ -717,16 +692,22 @@ const Output = ({ userWalletAddress }) => {
   };
 
   const navigateToBreadcrumb = (index) => {
+    // 如果点击的是milestone-detail层，直接return
+    if (breadcrumbs[index] && viewMode === 'milestone-detail') {
+      const crumb = breadcrumbs[index];
+      // 判断该crumb是否为milestone类型（可根据label或id规则）
+      const node = careerPlan?.nodes?.find(n => n.id === crumb.nodeId);
+      if (node && node.data && node.data.type === 'milestone') {
+        return;
+      }
+    }
     const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
     setBreadcrumbs(newBreadcrumbs);
-    
     if (index === -1) {
-      // 返回根视图
       setViewMode('overview');
       setFocusedNodeId(null);
       setHistoryStack([]);
     } else {
-      // 返回到选中的层级
       const targetNode = careerPlan.nodes.find(n => n.id === newBreadcrumbs[index].nodeId);
       if (targetNode) {
         setViewMode('year-detail');
@@ -734,7 +715,6 @@ const Output = ({ userWalletAddress }) => {
         setHistoryStack(Array(index).fill({ mode: 'overview', nodeId: null }));
       }
     }
-
     setTimeout(() => {
       if (reactFlowInstance) {
         const visibleNodes = filterFocusedNodes();
@@ -745,26 +725,37 @@ const Output = ({ userWalletAddress }) => {
 
   const filterFocusedNodes = () => {
     if (!careerPlan) return [];
-    
+    let result = [];
     if (viewMode === 'overview') {
-      return careerPlan.nodes.filter(node => 
+      result = careerPlan.nodes.filter(node => 
         node.data.type === 'root' || node.data.type === 'year'
       );
     } else if (viewMode === 'year-detail' && focusedNodeId) {
-      return careerPlan.nodes.filter(node => 
+      result = careerPlan.nodes.filter(node => 
         node.id === focusedNodeId || 
         (node.data.type === 'milestone' && node.data.parentNode === focusedNodeId) ||
-        // 保留已展开的里程碑的子树
-        (node.data.type === 'subtask' && node.id.startsWith(`${focusedNodeId}-subtree`))
+        (node.data.parentNode && node.data.parentNode === focusedNodeId)
       );
     } else if (viewMode === 'milestone-detail' && focusedNodeId) {
-      return careerPlan.nodes.filter(node => 
-        node.id === focusedNodeId || 
-        node.id.startsWith(`${focusedNodeId}-subtree`)
-      );
+      // 递归收集所有以 focusedNodeId 为祖先的节点
+      const collectSubtree = (id, acc) => {
+        careerPlan.nodes.forEach(node => {
+          if (node.data.parentNode === id && !acc.includes(node)) {
+            acc.push(node);
+            collectSubtree(node.id, acc);
+          }
+        });
+      };
+      const acc = [];
+      const rootNode = careerPlan.nodes.find(node => node.id === focusedNodeId);
+      if (rootNode) acc.push(rootNode);
+      collectSubtree(focusedNodeId, acc);
+      result = acc;
+    } else {
+      result = careerPlan.nodes;
     }
-    
-    return careerPlan.nodes;
+    console.log('filterFocusedNodes result:', result);
+    return result;
   };
   
   const filterFocusedEdges = () => {
@@ -816,15 +807,8 @@ const Output = ({ userWalletAddress }) => {
   }, [careerPlan]);
 
   const handleMoveEnd = useCallback(() => {
-    if (!reactFlowInstance) return;
-    
-    // 使用 fitView 确保所有可见节点都在视图中
-    reactFlowInstance.fitView({
-      padding: 0.2,
-      duration: 300,
-      includeHiddenNodes: false
-    });
-  }, [reactFlowInstance]);
+    // 不再自动 fitView
+  }, []);
 
   // nodeTypes 需要在组件内部定义，才能访问 loadingNode
   const nodeTypes = {
@@ -890,9 +874,7 @@ const Output = ({ userWalletAddress }) => {
               onMoveEnd={handleMoveEnd}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
-              minZoom={0.5}
-              maxZoom={1.5}
-              panOnDrag={false}
+              zoomOnScroll={true}
               fitView
               fitViewOptions={{
                 padding: 0.2,
