@@ -5,3 +5,4 @@ semantic-kernel
 openai
 aiohttp
 huggingface_hub
+google-generativeai
